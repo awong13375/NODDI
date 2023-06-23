@@ -48,6 +48,32 @@ bet = ['bet ' output ' ' 'nodif_brain_mask'];
 system(bet)
 
 %% eddy
-eddy = ['eddy ' '--imain=' input ' ' '--mask=nodif_brain_mask --index=index.txt --acqp=acqparams2.txt --bvecs=bvecs.txt --bvals=bvals.txt --topup=my_output --out=eddy_unwarped'];
+%% generate index.txt file
+nii = niftiread(input);
+header = whos ("nii");
+full_dimension = getfield(header, "size");
+dimension = full_dimension(4);
+
+indx = strings;
+for i = 1:dimension
+    if i == 1
+        indx = strcat(indx, '1');
+    else
+        indx = strcat(indx,{' '},'1');
+    end
+end
+
+index = fopen('index.txt', 'wt');
+fprintf(index, indx)
+fclose(index)
+
+%%
+eddy = ['eddy ' '--imain=' input ' --mask=nodif_brain_mask --index=index.txt' ...
+    ' --acqp=acqparams.txt' ...
+    ' --bvecs=DICOM_AX_DTI_NODDI_1_20230518105839_701_bvec.txt' ...
+    ' --bvals=DICOM_AX_DTI_NODDI_1_20230518105839_701_bval.txt' ...
+    ' --topup=my_output --out=eddy_unwarped'];
 system(eddy)
+%%
+eddy --imain=DICOM_AX_DTI_NODDI_1_20230518105839_701 --mask=nodif_brain_mask --index=index.txt --acqp=acqparams.txt --bvecs=DICOM_AX_DTI_NODDI_1_20230518105839_701_bvec.txt --bvals=DICOM_AX_DTI_NODDI_1_20230518105839_701_bval.txt --topup=my_output --out=eddy_unwarped
 
