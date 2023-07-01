@@ -23,12 +23,13 @@ system(fslmerge)
 filename = 'DICOM_AX_DTI_NODDI_1_20230518105839_701.json';
 metadata = jsondecode(fileread(filename));
 
-echotime = getfield(metadata, 'EchoTime');
-grappa = getfield(metadata, 'ParallelReductionFactorInPlane');
-phase_encode_steps = getfield(metadata,"PhaseEncodingSteps");
+%echotime = getfield(metadata, 'EchoTime');
+%grappa = getfield(metadata, 'ParallelReductionFactorInPlane');
+%phase_encode_steps = getfield(metadata,"PhaseEncodingSteps");
 
-echo_spacing=(echotime / grappa) / 1000;
-total_readout_time=echo_spacing * phase_encode_steps;
+%echo_spacing = (echotime / grappa) / 1000;
+%total_readout_time = echo_spacing * phase_encode_steps;
+total_readout_time = getfield(metadata,"EstimatedTotalReadoutTime")
 
 acqparams = fopen('acqparams.txt', 'wt');
 txt = ['0 ' '-1 ' '0 ' num2str(total_readout_time) ' ' '\n' '0 ' '1 ' '0 ' num2str(total_readout_time)];
@@ -40,12 +41,22 @@ topup = ['topup ' '--imain=b0.nii --datain=acqparams.txt --out=my_output --fout=
 system(topup)
 
 %% visualize top up correction images
-applytopup = ['applytopup ' '--imain=' output ',' calibration ' --datain=acqparams.txt --inindex=1,2 --topup=my_output --out=my_hifi_images'];
-system(applytopup)
+%applytopup = ['applytopup ' '--imain=' output ',' calibration ' --datain=acqparams.txt --inindex=1,2 --topup=my_output --out=my_hifi_images'];
+%system(applytopup)
 
 %% apply brain extraction tool
-bet = ['bet ' output ' ' 'nodif_brain_mask'];
+my_unwarped_images_b0=['fslroi ' 'my_unwarped_images ' 'my_unwarped_images_b0 ' '0 ' '1'];
+system(my_unwarped_images_b0)
+bet = ['bet ' 'my_unwarped_images_b0 ' 'nodif_brain_mask'];
 system(bet)
+brain_mask = 'nodif_brain_mask';
+
+%% DTI Fit
+%dtifit = ['dtifit --data=' input ' --mask=' brain_mask ' --out=dti'...
+%    ' --bvecs=DICOM_AX_DTI_NODDI_1_20230518105839_701_bvec.txt' ...
+%    ' --bvals=DICOM_AX_DTI_NODDI_1_20230518105839_701_bval.txt'];
+%system(dtifit)
+
 
 %% eddy
 %% generate index.txt file
@@ -68,7 +79,7 @@ fprintf(index, indx)
 fclose(index)
 
 %%
-eddy = ['eddy ' '--imain=' input ' --mask=nodif_brain_mask --index=index.txt' ...
+eddy = ['eddy ' '--imain=' input ' --mask=' brain_mask ' --index=index.txt' ...
     ' --acqp=acqparams.txt' ...
     ' --bvecs=DICOM_AX_DTI_NODDI_1_20230518105839_701_bvec.txt' ...
     ' --bvals=DICOM_AX_DTI_NODDI_1_20230518105839_701_bval.txt' ...
