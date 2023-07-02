@@ -2,8 +2,12 @@
 addpath(genpath('/usr/local/NODDI_tool'))
 
 %% set FSL environment
-setenv('PATH', [getenv('PATH') ':/Users/alexw/fsl/bin']);
-addpath(genpath('/Users/alexw/fsl/bin/fslroi.sh'))
+setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
+addpath(genpath('/usr/local/fsl/bin/fslroi.sh'))
+
+%%
+bashrc = ['source ~/.bashrc']
+system(bashrc)
 
 
 %% go to dataset directory
