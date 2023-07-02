@@ -6,11 +6,11 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-cd(['/mnt/c/WSL2_dir/wetransfer_noddi_2023-06-02_0338/SAH_NODDI/DICOM/'])
+cd(['/mnt/c/WSL2_dir/NODDI_post_eddy_2023-07-01/SEBE/DICOM/'])
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%SAH NODDI file list :
+%%
+%SAH NODDI file list: {'DICOM_AX_DTI_NODDI_1_20230518105839_701','DICOM_AX_DTI_NODDI_2_20230518105839_801','DICOM_AX_DTI_NODDI_3_20230518105839_901','DICOM_AX_DTI_NODDI_4_20230518105839_1001'}
 
 NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230518105839_701','DICOM_AX_DTI_NODDI_2_20230518105839_801',...
     'DICOM_AX_DTI_NODDI_3_20230518105839_901','DICOM_AX_DTI_NODDI_4_20230518105839_1001'};
