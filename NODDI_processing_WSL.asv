@@ -1,12 +1,11 @@
-%% include NODDI toolbox in directory
-% addpath(genpath('/usr/local/NODDI_tool'))
+%% 
 
 %% set FSL environment
 setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-cd(['/mnt/c/WSL2_dir/NODDI_post_eddy_2023-07-01/SEBE/DICOM/'])
+cd('/mnt/c/WSL2_dir/NODDI_post_eddy_2023-07-01/SEBE/DICOM/')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -14,7 +13,7 @@ cd(['/mnt/c/WSL2_dir/NODDI_post_eddy_2023-07-01/SEBE/DICOM/'])
 
 NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230518105839_701','DICOM_AX_DTI_NODDI_2_20230518105839_801',...
     'DICOM_AX_DTI_NODDI_3_20230518105839_901','DICOM_AX_DTI_NODDI_4_20230518105839_1001'};
-for noddi_files = 1:length(NODDI_nii_list);
+for noddi_files = 1:length(NODDI_nii_list)
     noddi_file = NODDI_nii_list{noddi_files};
 
     %% Pre-processing
@@ -38,12 +37,12 @@ for noddi_files = 1:length(NODDI_nii_list);
     %echo_spacing = (echotime / grappa) / 1000;
     %total_readout_time = echo_spacing * phase_encode_steps;
 
-    total_readout_time = getfield(metadata,"EstimatedTotalReadoutTime")
+    total_readout_time = getfield(metadata,"EstimatedTotalReadoutTime");
 
     acqparams = fopen('acqparams.txt', 'wt');
     txt = ['0 ' '-1 ' '0 ' num2str(total_readout_time) ' ' '\n' '0 ' '1 ' '0 ' num2str(total_readout_time)];
-    fprintf(acqparams, txt)
-    fclose(acqparams)
+    fprintf(acqparams, txt);
+    fclose(acqparams);
 
     %% Convert bvec bval files to txt
     %bval_files = dir('*.bval');
@@ -95,11 +94,11 @@ for noddi_files = 1:length(NODDI_nii_list);
     end
 
     index = fopen('index.txt', 'wt');
-    fprintf(index, indx)
-    fclose(index)
+    fprintf(index, indx);
+    fclose(index);
 
-    bvec_file = [noddi_file '_bvec.txt']
-    bval_file = [noddi_file '_bval.txt']
+    bvec_file = [noddi_file '_bvec.txt'];
+    bval_file = [noddi_file '_bval.txt'];
 
     %% run eddy
     eddy = ['eddy_cuda10.2 ' '--imain=' input ' --mask=' brain_mask ' --index=index.txt' ...
@@ -111,4 +110,10 @@ for noddi_files = 1:length(NODDI_nii_list);
 
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% NODDI data %%
+
+%% include NODDI toolbox and nifti_matlab in directory
+addpath('/usr/local/NODDI_toolbox_v1.05/')
+addpath('/usr/local/nifti_matlab/')

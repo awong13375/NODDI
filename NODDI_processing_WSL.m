@@ -1,5 +1,4 @@
-%% include NODDI toolbox in directory
-% addpath(genpath('/usr/local/NODDI_tool'))
+%% Pre-processing + Eddy %%
 
 %% set FSL environment
 setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
@@ -8,10 +7,7 @@ addpath(genpath('/usr/local/fsl/bin'))
 %% go to dataset directory
 cd('/mnt/c/WSL2_dir/NODDI_post_eddy_2023-07-01/SEBE/DICOM/')
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
-%SAH NODDI file list: {'DICOM_AX_DTI_NODDI_1_20230518105839_701','DICOM_AX_DTI_NODDI_2_20230518105839_801','DICOM_AX_DTI_NODDI_3_20230518105839_901','DICOM_AX_DTI_NODDI_4_20230518105839_1001'}
-
 NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230518105839_701','DICOM_AX_DTI_NODDI_2_20230518105839_801',...
     'DICOM_AX_DTI_NODDI_3_20230518105839_901','DICOM_AX_DTI_NODDI_4_20230518105839_1001'};
 for noddi_files = 1:length(NODDI_nii_list)
@@ -111,4 +107,10 @@ for noddi_files = 1:length(NODDI_nii_list)
 
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% NODDI data %%
+
+%% include NODDI toolbox and nifti_matlab in directory
+addpath('/usr/local/NODDI_toolbox_v1.05/')
+addpath('/usr/local/nifti_matlab/')
