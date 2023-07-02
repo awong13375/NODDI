@@ -58,7 +58,6 @@ brain_mask = 'nodif_brain_mask';
 %system(dtifit)
 
 
-%% eddy
 %% generate index.txt file
 nii = niftiread(input);
 header = whos ("nii");
@@ -78,13 +77,10 @@ index = fopen('index.txt', 'wt');
 fprintf(index, indx)
 fclose(index)
 
-%%
+%% run eddy
 eddy = ['eddy ' '--imain=' input ' --mask=' brain_mask ' --index=index.txt' ...
     ' --acqp=acqparams.txt' ...
     ' --bvecs=DICOM_AX_DTI_NODDI_1_20230518105839_701_bvec.txt' ...
     ' --bvals=DICOM_AX_DTI_NODDI_1_20230518105839_701_bval.txt' ...
-    ' --topup=my_output --out=eddy_unwarped'];
+    ' --topup=my_output --out=eddy_unwarped --very_verbose'];
 system(eddy)
-%%
-eddy --imain=DICOM_AX_DTI_NODDI_1_20230518105839_701 --mask=nodif_brain_mask --index=index.txt --acqp=acqparams.txt --bvecs=DICOM_AX_DTI_NODDI_1_20230518105839_701_bvec.txt --bvals=DICOM_AX_DTI_NODDI_1_20230518105839_701_bval.txt --topup=my_output --out=eddy_unwarped
-
