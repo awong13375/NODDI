@@ -14,15 +14,15 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-cd('/mnt/c/WSL2_dir/Patient 2 2023-08-01/DICOM/NODDI_processing')
+cd('/mnt/c/WSL2_dir/Patient 3 2023-09-25/DICOM/NODDI_processing')
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230801120712_901',...
-    'DICOM_AX_DTI_NODDI_2_20230801120712_1001',...
-    'DICOM_AX_DTI_NODDI_3_20230801120712_1101',...
-    'DICOM_AX_DTI_NODDI_4_20230801120712_1201'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230924185500_601',...
+    'DICOM_AX_DTI_NODDI_2_20230924185500_701',...
+    'DICOM_AX_DTI_NODDI_3_20230924185500_801',...
+    'DICOM_AX_DTI_NODDI_4_20230924185500_901'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20230801120712_801';
+calibration = 'DICOM_AX_DTI_Calibration_20230924185500_401';
 
 for noddi_files = 1:length(NODDI_nii_list)
     noddi_file = NODDI_nii_list{noddi_files};
@@ -68,7 +68,7 @@ for noddi_files = 1:length(NODDI_nii_list)
     %end
 
     %% top up
-    topup = ['topup ' '--imain=b0.nii --datain=acqparams.txt --out=my_output --fout=my_field --iout=my_unwarped_images'];
+    topup = ['topup ' '--imain=b0.nii --datain=acqparams.txt --out=my_output --fout=my_field --iout=my_unwarped_images --verbose'];
     system(topup)
 
     %% visualize top up correction images
@@ -124,14 +124,14 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% extract nii.gz files %%
-cd('/mnt/c/WSL2_dir/Patient 2 2023-08-01/DICOM/NODDI_processing/')
+cd('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/NODDI_processing')
 n = 4;
-scan_n = {'901','1001','1101','1201'};
+scan_n = {'701','801','901','1001'};
 
 %% NODDI avg 4 sequences %%
 for i = 1:n
     scan_num = scan_n(i);
-    base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),'_20230801120712_',string(scan_num),'_eddy_unwarped');
+    base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),'_20230518105839_',string(scan_num),'_eddy_unwarped');
     gunzip(strcat(base_file_name, '.nii.gz'))
 
     if i == 1
@@ -150,7 +150,7 @@ for i = 1:n
         NODDIdata_4 = niftiread(strcat(base_file_name, '.nii'));
         scan_num = scan_n(1);
         i = 1;
-        base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),'_20230801120712_',string(scan_num),'_eddy_unwarped');
+        base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),'_20230518105839_',string(scan_num),'_eddy_unwarped');
     end
 end
 
@@ -183,17 +183,17 @@ niftiwrite(NODDI_data,'NODDI_data',info_NODDI)
 b0_roi = ['fslroi ' 'NODDI_data ' 'NODDI_data_b0 ' '0 1'];
 system(b0_roi)
 gunzip('NODDI_data_b0.nii.gz')
-
+%%
 NODDI_bet = ['bet ' 'NODDI_data_b0 ' 'b0_bet_mask'];
 system(NODDI_bet)
 b0_bet_mask = 'b0_bet_mask';
 gunzip('b0_bet_mask.nii.gz')
-
+%%
 CreateROI2('NODDI_data.nii','b0_bet_mask','NODDI_roi.mat');
 
 shortened_base_file_name = erase(base_file_name,'_eddy_unwarped');
 bval_filename = strcat(shortened_base_file_name,'_bval.txt');
-bvec_filename = strcat(shortened_base_file_name,'_bvec.txt');
+bvec_filename = strcat(shortened_base_file_name,'_eddy_unwarped.eddy_rotated_bvecs.txt');
 
 Protocol = FSL2Protocol(bval_filename, bvec_filename);
 noddi = MakeModel('WatsonSHStickTortIsoV_B0');
