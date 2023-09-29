@@ -57,7 +57,7 @@ for noddi_files = 1:length(NODDI_nii_list)
     if i == 1
         output_1 = output;
     elseif i == 2
-            output_2 = output;
+        output_2 = output;
     elseif i == 3
         output_3 = output;
     else 
