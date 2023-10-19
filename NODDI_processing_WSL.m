@@ -15,20 +15,37 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-cd('/mnt/c/WSL2_dir/Patient 3 2023-09-25/DICOM/NODDI_processing')
+dataset_directory = '/mnt/c/WSL2_dir/Patient 5 2023-10-17/DICOM/DICOM/NODDI_processing';
+cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230924185500_601',...
-    'DICOM_AX_DTI_NODDI_2_20230924185500_701',...
-    'DICOM_AX_DTI_NODDI_3_20230924185500_801',...
-    'DICOM_AX_DTI_NODDI_4_20230924185500_901'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20231017113316_1301',...
+    'DICOM_AX_DTI_NODDI_2_20231017113316_1401',...
+    'DICOM_AX_DTI_NODDI_3_20231017113316_1501',...
+    'DICOM_AX_DTI_NODDI_4_20231017113316_1601'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20230924185500_401';
-t2 = 'DICOM_AX_T2W_CSENSE_20230924185500_1701';
+calibration = 'DICOM_AX_DTI_Calibration_20231017113316_1201';
+t2 = 'DICOM_AX_T2W_CSENSE_20231017113316_901';
 
 for noddi_files = 1:length(NODDI_nii_list)
     noddi_file = NODDI_nii_list{noddi_files};
+    orig_bval = [noddi_file '.bval'];
+    rename_bval = [noddi_file '_bval.txt'];
+    orig_bvec = [noddi_file '.bvec'];
+    rename_bvec = [noddi_file '_bvec.txt'];
 
+    rename = ['mv ' orig_bval ' ' rename_bval];
+    system(rename)
+
+    rename = ['mv ' orig_bvec ' ' rename_bvec];
+    system(rename)
+end
+
+%%
+
+for noddi_files = 1:length(NODDI_nii_list)
+    noddi_file = NODDI_nii_list{noddi_files};
+    
     %% Pre-processing
     input = noddi_file;
     output = [noddi_file '_b0'];
@@ -126,19 +143,21 @@ for noddi_files = 1:length(NODDI_nii_list)
     system(eddy)
 end
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% NODDI Toolbox analysis %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% extract nii.gz files %%
-cd('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/NODDI_processing')
+cd(dataset_directory)
 n = 4;
-scan_n = {'701','801','901','1001'};
+scan_n = {'1301','1401','1501','1601'};
+accession_num = '_20231017113316_';
 
 %% NODDI avg 4 sequences %%
 for i = 1:n
     scan_num = scan_n(i);
-    base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),'_20230518105839_',string(scan_num),'_eddy_unwarped');
+    base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),string(accession_num),string(scan_num),'_eddy_unwarped');
     gunzip(strcat(base_file_name, '.nii.gz'))
 
     if i == 1
@@ -155,9 +174,9 @@ for i = 1:n
 
     if i == 4
         NODDIdata_4 = niftiread(strcat(base_file_name, '.nii'));
-        scan_num = scan_n(1);
+       scan_num = scan_n(1);
         i = 1;
-        base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),'_20230518105839_',string(scan_num),'_eddy_unwarped');
+        base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),string(accession_num) ,string(scan_num),'_eddy_unwarped');
     end
 end
 
@@ -189,18 +208,32 @@ niftiwrite(NODDI_data,'NODDI_data',info_NODDI)
 
 b0_roi = ['fslroi ' 'NODDI_data ' 'NODDI_data_b0 ' '0 1'];
 system(b0_roi)
-gunzip('NODDI_data_b0.nii.gz')
+
 %%
-NODDI_bet = ['bet ' 'NODDI_data_b0 ' 'b0_bet_mask'];
+NODDI_bet = ['bet ' 'NODDI_data_b0 ' 'b0_bet_mask ' '-A2 ' t2 ' -R -f 0.7 -v -g -0.01'];
 system(NODDI_bet)
 b0_bet_mask = 'b0_bet_mask';
+
+V = niftiread('NODDI_data_b0.nii.gz');
+    mask = niftiread('b0_bet_mask.nii.gz');
+    tool = imtool3D(V);
+    tool.setMask(mask);
+
+%%
+gunzip('NODDI_data_b0.nii.gz')
 gunzip('b0_bet_mask.nii.gz')
+
+orig_rotated_bvec = strcat(base_file_name, '.eddy_rotated_bvecs');
+rename_rotated_bvec = strcat(base_file_name, '_eddy_rotated_bvecs.txt');
+rename = ['mv ', orig_rotated_bvec, ' ', rename_rotated_bvec];
+%%
+system(strjoin(rename))
 %%
 CreateROI2('NODDI_data.nii','b0_bet_mask','NODDI_roi.mat');
 
 shortened_base_file_name = erase(base_file_name,'_eddy_unwarped');
 bval_filename = strcat(shortened_base_file_name,'_bval.txt');
-bvec_filename = strcat(shortened_base_file_name,'_eddy_unwarped.eddy_rotated_bvecs.txt');
+bvec_filename = strcat(shortened_base_file_name,'_eddy_unwarped_eddy_rotated_bvecs.txt');
 
 Protocol = FSL2Protocol(bval_filename, bvec_filename);
 noddi = MakeModel('WatsonSHStickTortIsoV_B0');
@@ -208,21 +241,23 @@ batch_fitting('NODDI_roi.mat', Protocol, noddi, 'FittedParams.mat');
 
 SaveParamsAsNIfTI('FittedParams.mat', 'NODDI_roi.mat', 'b0_bet_mask.nii', 'Case1')
 
+delete('NODDI_data_b0.nii')
+delete('b0_bet_mask.nii')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% DCE coregistration on SPM12 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Go to dataset directory %%
 
-cd('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/')
+cd('/mnt/c/WSL2_dir/Patient 5 2023-10-17/DICOM/DICOM/DCE_processing')
 
 %% refrence sequence (T1 10 deg) %%
-ref_seq = cellstr('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/DICOM_T1map_10_deg_20230518105839_1601.nii');
+ref_seq = cellstr('DICOM_T1map_10_deg_20231017113316_2101.nii');
 
 %% source sequences %%
-t1_5_deg = cellstr('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/DICOM_T1map_5_deg_20230518105839_1501.nii');
-t1_2_deg = cellstr('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/DICOM_T1map_2_deg_20230518105839_1401.nii');
-dce_seq = cellstr('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/DICOM_DCE_5sec_50phases_20230518105839_1701.nii');
+t1_5_deg = cellstr('DICOM_T1map_5_deg_20231017113316_2001.nii');
+t1_2_deg = cellstr('DICOM_T1map_2_deg_20231017113316_1901.nii');
+dce_seq = cellstr('DICOM_DCE_5sec_50phases_20231017113316_2201.nii');
 
 %% Extract nii.gz files %%
 gunzip(strcat(ref_seq, '.gz'))
@@ -278,6 +313,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 run_parametric
 
+%% extract ROI and AIF %%
+gunzip(strcat('r', erase(dce_seq, '.nii'), '_ROI.nii.gz'));
+gunzip(strcat('r', erase(dce_seq, '.nii'), '_AIF.nii.gz'));
 %%
 dce
 %%
