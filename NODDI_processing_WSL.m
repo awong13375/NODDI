@@ -15,17 +15,17 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/Patient 5 2023-10-17/DICOM/DICOM/NODDI_processing';
+dataset_directory = '/mnt/c/WSL2_dir/VG/DICOM';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20231017113316_1301',...
-    'DICOM_AX_DTI_NODDI_2_20231017113316_1401',...
-    'DICOM_AX_DTI_NODDI_3_20231017113316_1501',...
-    'DICOM_AX_DTI_NODDI_4_20231017113316_1601'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20231030112145_1401',...
+    'DICOM_AX_DTI_NODDI_2_20231030112145_1501',...
+    'DICOM_AX_DTI_NODDI_3_20231030112145_1601',...
+    'DICOM_AX_DTI_NODDI_4_20231030112145_1701'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20231017113316_1201';
-t2 = 'DICOM_AX_T2W_CSENSE_20231017113316_901';
+calibration = 'DICOM_AX_DTI_Calibration_20231030112145_1301';
+t2 = 'DICOM_AX_T2W_CSENSE_20231030112145_401';
 
 for noddi_files = 1:length(NODDI_nii_list)
     noddi_file = NODDI_nii_list{noddi_files};
@@ -97,7 +97,7 @@ for noddi_files = 1:length(NODDI_nii_list)
     %% apply brain extraction tool
     my_unwarped_images_b0=['fslroi ' 'my_unwarped_images ' 'my_unwarped_images_b0 ' '0 ' '1'];
     system(my_unwarped_images_b0)
-    bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-A2 ' t2 ' -R -f 0.7 -v'];
+    bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -v'];
     system(bet)
     brain_mask = 'nodif_brain_mask';
 
@@ -143,7 +143,6 @@ for noddi_files = 1:length(NODDI_nii_list)
     system(eddy)
 end
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% NODDI Toolbox analysis %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -151,8 +150,8 @@ end
 %% extract nii.gz files %%
 cd(dataset_directory)
 n = 4;
-scan_n = {'1301','1401','1501','1601'};
-accession_num = '_20231017113316_';
+scan_n = {'901','1001','1101','1201'};
+accession_num = '_20231018105619_';
 
 %% NODDI avg 4 sequences %%
 for i = 1:n
@@ -249,15 +248,15 @@ delete('b0_bet_mask.nii')
 
 %% Go to dataset directory %%
 
-cd('/mnt/c/WSL2_dir/Patient 5 2023-10-17/DICOM/DICOM/DCE_processing')
+cd('/mnt/c/WSL2_dir/Patient 6 2023-10-19/NODDISAH6/MRI/DICOM/DCE_processing')
 
 %% refrence sequence (T1 10 deg) %%
-ref_seq = cellstr('DICOM_T1map_10_deg_20231017113316_2101.nii');
+ref_seq = cellstr('DICOM_T1map_10_deg_20231018105619_1501.nii');
 
 %% source sequences %%
-t1_5_deg = cellstr('DICOM_T1map_5_deg_20231017113316_2001.nii');
-t1_2_deg = cellstr('DICOM_T1map_2_deg_20231017113316_1901.nii');
-dce_seq = cellstr('DICOM_DCE_5sec_50phases_20231017113316_2201.nii');
+t1_5_deg = cellstr('DICOM_T1map_5_deg_20231018105619_1401.nii');
+t1_2_deg = cellstr('DICOM_T1map_2_deg_20231018105619_1301.nii');
+dce_seq = cellstr('DICOM_DCE_5sec_50phases_20231018105619_1601.nii');
 
 %% Extract nii.gz files %%
 gunzip(strcat(ref_seq, '.gz'))
@@ -277,8 +276,8 @@ end
 spm('defaults', 'FMRI');
 spm_jobman('run', jobs, inputs{:});
 
-%% coregister T1 2 deg sequence %%
-nrun = 1; % enter the number of runs here
+
+nrun = 1; % enter the number of runs here %% coregister T1 2 deg sequence
 jobfile = {'/mnt/c/Github/NODDI/batch_coreg_estimate_reslice_job.m'};
 jobs = repmat(jobfile, 1, nrun);
 inputs = cell(2, nrun);
@@ -289,10 +288,7 @@ end
 spm('defaults', 'FMRI');
 spm_jobman('run', jobs, inputs{:});
 
-%% coregister DCE sequences %%
-
-%% specify # of volumes %%
-n = 50;
+n = 50; % Coregister DCE sequences, specify # of volumes %%
 
 for i = 1:n
     dce_seq_vol = cellstr(strcat(dce_seq, ',', string(i)));

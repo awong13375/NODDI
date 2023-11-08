@@ -15,16 +15,17 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-cd('/mnt/c/WSL2_dir/Patient 3 2023-09-25/DICOM/NODDI_processing')
+dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_8';
+cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230924185500_601',...
-    'DICOM_AX_DTI_NODDI_2_20230924185500_701',...
-    'DICOM_AX_DTI_NODDI_3_20230924185500_801',...
-    'DICOM_AX_DTI_NODDI_4_20230924185500_901'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230518105839_701',...
+    'DICOM_AX_DTI_NODDI_2_20230518105839_801',...
+    'DICOM_AX_DTI_NODDI_3_20230518105839_901',...
+    'DICOM_AX_DTI_NODDI_4_20230518105839_1001'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20230924185500_401';
-t2 = 'DICOM_AX_T2W_CSENSE_20230924185500_1701';
+calibration = 'DICOM_AX_DTI_Calibration_20230518105839_1101';
+t2 = 'DICOM_AX_T2W_CSENSE_20230518105839_401';
 
 %% rename bvec and bval files
 
@@ -108,7 +109,7 @@ system(topup)
 %% bet 
 %% (adjust f and g, higher f (0-1) value is more stringent, higher g (-1-1) means more stringent at top, more liberal at bottom)
 
-bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-A2 ' t2 ' -R -f 0.7 -v'];
+bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -v'];
 %bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-f 0.7'];
 system(bet)
 brain_mask = 'nodif_brain_mask';
@@ -173,178 +174,37 @@ eddy = ['eddy_cuda10.2 ' '--imain=data' ' --mask=' brain_mask ' --index=index.tx
         ' --topup=my_output --out=data_eddy_unwarped' ' --repol --estimate_move_by_susceptibility --very_verbose'];
 system(eddy)
 
-%%
-
-for noddi_files = 1:length(NODDI_nii_list)
-    noddi_file = NODDI_nii_list{noddi_files};
-
-    %% Pre-processing
-    input = noddi_file;
-    output = [noddi_file '_b0'];
-    fslroi = ['fslroi' ' ' input ' ' output ' ' '0 ' '1'];
-    system(fslroi)
-    
-    fslmerge = ['fslmerge -t b0' ' ' output ' ' calibration ];
-    system(fslmerge)
-
-    %% Generate acqparams.txt
-    filename = [noddi_file '.json'];
-    metadata = jsondecode(fileread(filename));
-
-    %echotime = getfield(metadata, 'EchoTime');
-    %grappa = getfield(metadata, 'ParallelReductionFactorInPlane');
-    %phase_encode_steps = getfield(metadata,"PhaseEncodingSteps");
-
-    %echo_spacing = (echotime / grappa) / 1000;
-    %total_readout_time = echo_spacing * phase_encode_steps;
-
-    total_readout_time = getfield(metadata,"EstimatedTotalReadoutTime");
-
-    acqparams = fopen('acqparams.txt', 'wt');
-    txt = ['0 ' '-1 ' '0 ' num2str(total_readout_time) ' ' '\n' '0 ' '1 ' '0 ' num2str(total_readout_time)];
-    fprintf(acqparams, txt);
-    fclose(acqparams);
-
-    %% Convert bvec bval files to txt
-    %bval_files = dir('*.bval');
-    %bvec_files = dir('*.bvec');
-
-    %for id = 1:length(bval_files)
-        % Get the file name 
-    %    [~, f,ext] = fileparts(files(DICOM_AX_DTI_NODDI_2_20230518105839_801.bval).name);
-
-        %[~, f,ext] = fileparts(files(id).name)
-    %    rename = strcat(f,'_',ext) ; 
-    %    movefile(files(id).name, rename); 
-    %end
-
-    %% top up
-    topup = ['topup ' '--imain=b0.nii --datain=acqparams.txt --out=my_output --fout=my_field --iout=my_unwarped_images --verbose'];
-    system(topup)
-
-    %% visualize top up correction images
-    %applytopup = ['applytopup ' '--imain=' output ',' calibration ' --datain=acqparams.txt --inindex=1,2 --topup=my_output --out=my_hifi_images'];
-    %system(applytopup)
-
-    %% apply brain extraction tool
-    my_unwarped_images_b0=['fslroi ' 'my_unwarped_images ' 'my_unwarped_images_b0 ' '0 ' '1'];
-    system(my_unwarped_images_b0)
-    bet = ['bet ' 'my_unwarped_images_b0 ' 'nodif_brain_mask'];
-    system(bet)
-    brain_mask = 'nodif_brain_mask';
-
-    %% DTI Fit
-    %dtifit = ['dtifit --data=' input ' --mask=' brain_mask ' --out=dti'...
-    %    ' --bvecs=DICOM_AX_DTI_NODDI_1_20230518105839_701_bvec.txt' ...
-    %    ' --bvals=DICOM_AX_DTI_NODDI_1_20230518105839_701_bval.txt'];
-    %system(dtifit)
-
-    %% generate index.txt file
-    nii = niftiread(input);
-    header = whos ("nii");
-    full_dimension = getfield(header, "size");
-    dimension = full_dimension(4);
-
-    indx = strings;
-    for i = 1:dimension
-        if i == 1
-            indx = strcat(indx, '1');
-        else
-            indx = strcat(indx,{' '},'1');
-        end
-    end
-
-    index = fopen('index.txt', 'wt');
-    fprintf(index, indx);
-    fclose(index);
-
-    bvec_file = [noddi_file '_bvec.txt'];
-    bval_file = [noddi_file '_bval.txt'];
-
-    %% run eddy
-    eddy = ['eddy_cuda10.2 ' '--imain=' input ' --mask=' brain_mask ' --index=index.txt' ...
-        ' --acqp=acqparams.txt' ...
-        ' --bvecs=' bvec_file ...
-        ' --bvals=' bval_file ...
-        ' --topup=my_output --out=' noddi_file '_eddy_unwarped' ' --very_verbose'];
-    system(eddy)
-end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% NODDI Toolbox analysis %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% extract nii.gz files %%
-cd('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/NODDI_processing')
-n = 4;
-scan_n = {'701','801','901','1001'};
-
-%% NODDI avg 4 sequences %%
-for i = 1:n
-    scan_num = scan_n(i);
-    base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),'_20230518105839_',string(scan_num),'_eddy_unwarped');
-    gunzip(strcat(base_file_name, '.nii.gz'))
-
-    if i == 1
-        NODDIdata_1 = niftiread(strcat(base_file_name, '.nii'));
-    end
-
-    if i == 2
-        NODDIdata_2 = niftiread(strcat(base_file_name, '.nii'));
-    end
-
-    if i == 3
-        NODDIdata_3 = niftiread(strcat(base_file_name, '.nii'));
-    end
-
-    if i == 4
-        NODDIdata_4 = niftiread(strcat(base_file_name, '.nii'));
-        scan_num = scan_n(1);
-        i = 1;
-        base_file_name = strcat('DICOM_AX_DTI_NODDI_',string(i),'_20230518105839_',string(scan_num),'_eddy_unwarped');
-    end
-end
-
-xsize = size(NODDIdata_1,1);
-ysize = size(NODDIdata_1,2);
-zsize = size(NODDIdata_1,3);
-ndirs = size(NODDIdata_1,4);
-
-NODDI_data = zeros(xsize, ysize, zsize, ndirs);
-
-for i = 1:xsize
-    for j = 1:ysize
-        for k = 1:zsize
-            for m = 1:ndirs
-                NODDI_data(i,j,k,m) = (NODDIdata_1(i,j,k,m) + ...
-                    NODDIdata_2(i,j,k,m) + NODDIdata_3(i,j,k,m) + ...
-                    NODDIdata_4(i,j,k,m))/4;
-            end
-        end
-    end
-end
-
-NODDI_data = single(NODDI_data);
-
-info_NODDI = niftiinfo(strcat(base_file_name, '.nii'));
-niftiwrite(NODDI_data,'NODDI_data',info_NODDI)
+cd(dataset_directory)
 
 %% NODDI Toolbox analysis %%
 
-b0_roi = ['fslroi ' 'NODDI_data ' 'NODDI_data_b0 ' '0 1'];
+b0_roi = ['fslroi ' 'data_eddy_unwarped ' 'NODDI_data_b0 ' '0 1'];
 system(b0_roi)
-gunzip('NODDI_data_b0.nii.gz')
 %%
-NODDI_bet = ['bet ' 'NODDI_data_b0 ' 'b0_bet_mask'];
+NODDI_bet = ['bet ' 'NODDI_data_b0 ' 'b0_bet_mask' ' -A2 ' t2 ' -R -f 0.5 -v'];
 system(NODDI_bet)
 b0_bet_mask = 'b0_bet_mask';
-gunzip('b0_bet_mask.nii.gz')
-%%
-CreateROI2('NODDI_data.nii','b0_bet_mask','NODDI_roi.mat');
 
-shortened_base_file_name = erase(base_file_name,'_eddy_unwarped');
+gunzip('NODDI_data_b0.nii.gz')
+gunzip('b0_bet_mask.nii.gz')
+gunzip('data_eddy_unwarped.nii.gz')
+
+%%
+CreateROI2('data_eddy_unwarped.nii','b0_bet_mask','NODDI_roi.mat');
+
+orig_rotated_bvec = strcat('data_eddy_unwarped', '.eddy_rotated_bvecs');
+rename_rotated_bvec = strcat('data_eddy_unwarped', '_eddy_rotated_bvecs.txt');
+rename = ['mv ', orig_rotated_bvec, ' ', rename_rotated_bvec];
+%%
+system(rename)
+%%
+shortened_base_file_name = erase('data_eddy_unwarped','_eddy_unwarped');
 bval_filename = strcat(shortened_base_file_name,'_bval.txt');
-bvec_filename = strcat(shortened_base_file_name,'_eddy_unwarped.eddy_rotated_bvecs.txt');
+bvec_filename = strcat(shortened_base_file_name,'_eddy_unwarped_eddy_rotated_bvecs.txt');
 
 Protocol = FSL2Protocol(bval_filename, bvec_filename);
 noddi = MakeModel('WatsonSHStickTortIsoV_B0');
@@ -358,15 +218,15 @@ SaveParamsAsNIfTI('FittedParams.mat', 'NODDI_roi.mat', 'b0_bet_mask.nii', 'Case1
 
 %% Go to dataset directory %%
 
-cd('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/')
+cd('/mnt/c/WSL2_dir/NODDISAH_8')
 
 %% refrence sequence (T1 10 deg) %%
-ref_seq = cellstr('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/DICOM_T1map_10_deg_20230518105839_1601.nii');
+ref_seq = cellstr('T1map_10_deg_1601.nii');
 
 %% source sequences %%
-t1_5_deg = cellstr('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/DICOM_T1map_5_deg_20230518105839_1501.nii');
-t1_2_deg = cellstr('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/DICOM_T1map_2_deg_20230518105839_1401.nii');
-dce_seq = cellstr('/mnt/c/WSL2_dir/Patient 1 2023-07-01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing/DICOM_DCE_5sec_50phases_20230518105839_1701.nii');
+t1_5_deg = cellstr('T1map_5_deg_1501.nii');
+t1_2_deg = cellstr('T1map_2_deg_1401.nii');
+dce_seq = cellstr('DCE_5sec_50phases_1701.nii');
 
 %% Extract nii.gz files %%
 gunzip(strcat(ref_seq, '.gz'))
@@ -423,6 +283,12 @@ end
 run_parametric
 
 %%
+
+gunzip(strcat('r', erase(dce_seq, '.nii'), '_ROI.nii.gz'));
+gunzip(strcat('r', erase(dce_seq, '.nii'), '_AIF.nii.gz'));
+
+%%
+
 dce
 %%
 
