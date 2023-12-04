@@ -19,13 +19,10 @@ dataset_directory = '/mnt/c/WSL2_dir/AVM cases/ES/ES/DICOM';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230518105839_701',...
-    'DICOM_AX_DTI_NODDI_2_20230518105839_801',...
-    'DICOM_AX_DTI_NODDI_3_20230518105839_901',...
-    'DICOM_AX_DTI_NODDI_4_20230518105839_1001'};
+NODDI_nii_list = {'data2'};
 
-calibration = 'DICOM_HR_DTI_calibration_20230301120802_701';
-t2 = 'DICOM_AX_T2W_CSENSE_20230301120802_601';
+calibration = 'Cal2';
+t2 = 'AX_T2W_CSENSE_601';
 
 %% rename bvec and bval files
 
@@ -68,7 +65,7 @@ for noddi_files = 1:length(NODDI_nii_list)
 end
 
 %% fsl merge b0 scans
-fslmerge = ['fslmerge -t b0 ' output_1 ' ' output_2 ' ' output_3 ' ' output_4 ' ' calibration ];
+fslmerge = ['fslmerge -t b0 ' output_1 ' ' calibration ];
 
 system(fslmerge)
 
@@ -97,9 +94,7 @@ metadata = jsondecode(fileread(filename));
 total_readout_time_cal = getfield(metadata,"EstimatedTotalReadoutTime");
 
 acqparams = fopen('acqparams.txt', 'wt');
-txt = ['0 ' '1 ' '0 ' num2str(total_readout_time_1) '\n' '0 ' '1 ' '0 ' num2str(total_readout_time_2)... 
-'\n' '0 ' '1 ' '0 ' num2str(total_readout_time_3) '\n' '0 ' '1 ' '0 ' num2str(total_readout_time_4)...
-'\n' '0 ' '-1 ' '0 ' num2str(total_readout_time_cal)];
+txt = ['0 ' '1 ' '0 ' num2str(total_readout_time_1) '\n' '0 ' '-1 ' '0 ' num2str(total_readout_time_cal)];
 fprintf(acqparams, txt);
 fclose(acqparams);
 
@@ -110,7 +105,7 @@ system(topup)
 %% bet 
 %% (adjust f and g, higher f (0-1) value is more stringent, higher g (-1-1) means more stringent at top, more liberal at bottom)
 
-bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -v'];
+bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-A2 ' t2 ' -R -f 0.5  -v'];
 %bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-f 0.7'];
 system(bet)
 brain_mask = 'nodif_brain_mask';
@@ -168,10 +163,10 @@ fprintf(index, indx);
 fclose(index);
 
 %% run eddy
-eddy = ['eddy_cuda10.2 ' '--imain=data' ' --mask=' brain_mask ' --index=index.txt' ...
+eddy = ['eddy_cuda10.2 ' '--imain=data2' ' --mask=' brain_mask ' --index=index.txt' ...
         ' --acqp=acqparams.txt' ...
-        ' --bvecs=data_bvec.txt' ...
-        ' --bvals=data_bval.txt' ...
+        ' --bvecs=data2_bvec.txt' ...
+        ' --bvals=data2_bval.txt' ...
         ' --topup=my_output --out=data_eddy_unwarped' ' --repol --estimate_move_by_susceptibility --very_verbose'];
 system(eddy)
 
@@ -219,14 +214,14 @@ SaveParamsAsNIfTI('FittedParams.mat', 'NODDI_roi.mat', 'b0_bet_mask.nii', 'Case1
 
 %% Go to dataset directory %%
 
-cd('/mnt/c/WSL2_dir/NODDISAH_09')
+cd('/mnt/c/WSL2_dir/NODDI_SAH10')
 
 %% refrence sequence (T1 10 deg) %%
-ref_seq = cellstr('T1map_10_deg_1501a.nii');
+ref_seq = cellstr('T1map_10_deg_1501.nii');
 
 %% source sequences %%
-t1_5_deg = cellstr('T1map_5_deg_1401a.nii');
-t1_2_deg = cellstr('T1map_2_deg_1301a.nii');
+t1_5_deg = cellstr('T1map_5_deg_1401.nii');
+t1_2_deg = cellstr('T1map_2_deg_1301.nii');
 dce_seq = cellstr('DCE_5sec_50phases_1601.nii');
 
 %% Extract nii.gz files %%
@@ -247,7 +242,7 @@ end
 spm('defaults', 'FMRI');
 spm_jobman('run', jobs, inputs{:});
 
-% coregister T1 2 deg sequence %
+%% coregister T1 2 deg sequence %%
 nrun = 1; % enter the number of runs here
 jobfile = {'/mnt/c/Github/NODDI/batch_coreg_estimate_reslice_job.m'};
 jobs = repmat(jobfile, 1, nrun);
@@ -259,9 +254,9 @@ end
 spm('defaults', 'FMRI');
 spm_jobman('run', jobs, inputs{:});
 
-% coregister DCE sequences %
+%% coregister DCE sequences %%
 
-% specify # of volumes %
+%% specify # of volumes %%
 n = 50;
 
 for i = 1:n
@@ -291,8 +286,5 @@ gunzip(strcat('r', erase(dce_seq, '.nii'), '_AIF.nii.gz'));
 %%
 
 dce
-
-
-
 %%
 
