@@ -15,17 +15,17 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/AVM cases/ES/ES/DICOM';
+dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_12/NODDI_processing';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230518105839_701',...
-    'DICOM_AX_DTI_NODDI_2_20230518105839_801',...
-    'DICOM_AX_DTI_NODDI_3_20230518105839_901',...
-    'DICOM_AX_DTI_NODDI_4_20230518105839_1001'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240119125543_1401',...
+    'DICOM_AX_DTI_NODDI_2_20240119125543_1501',...
+    'DICOM_AX_DTI_NODDI_3_20240119125543_1601',...
+    'DICOM_AX_DTI_NODDI_4_20240119125543_1701'};
 
-calibration = 'DICOM_HR_DTI_calibration_20230301120802_701';
-t2 = 'DICOM_AX_T2W_CSENSE_20230301120802_601';
+calibration = 'DICOM_AX_DTI_Calibration_20240119125543_1301';
+t2 = 'DICOM_AX_T2W_CSENSE_20240119125543_601';
 
 %% rename bvec and bval files
 
@@ -219,15 +219,15 @@ SaveParamsAsNIfTI('FittedParams.mat', 'NODDI_roi.mat', 'b0_bet_mask.nii', 'Case1
 
 %% Go to dataset directory %%
 
-cd('/mnt/c/WSL2_dir/NODDISAH_09')
+cd('/mnt/c/WSL2_dir/NODDISAH_12/DCE_processing')
 
 %% refrence sequence (T1 10 deg) %%
-ref_seq = cellstr('T1map_10_deg_1501a.nii');
+ref_seq = cellstr('DICOM_T1map_10_deg_20240119125543_2001.nii');
 
 %% source sequences %%
-t1_5_deg = cellstr('T1map_5_deg_1401a.nii');
-t1_2_deg = cellstr('T1map_2_deg_1301a.nii');
-dce_seq = cellstr('DCE_5sec_50phases_1601.nii');
+t1_5_deg = cellstr('DICOM_T1map_5_deg_20240119125543_1901.nii');
+t1_2_deg = cellstr('DICOM_T1map_2_deg_20240119125543_1801.nii');
+dce_seq = cellstr('DICOM_DCE_5sec_50phases_20240119125543_2201.nii');
 
 %% Extract nii.gz files %%
 gunzip(strcat(ref_seq, '.gz'))
