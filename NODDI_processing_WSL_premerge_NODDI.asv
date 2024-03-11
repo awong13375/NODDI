@@ -216,16 +216,20 @@ for i = 1:length(tensor_dir)
 end
 
 %% coregister to atlas JHU FA atlas
+
+source_seq = ['dti_tensor_Dxx'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm.nii'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -omat invol2refvol.mat -v' ];
+system(flirt_coreg)
+
 for i = 1:length(tensor_dir)
     ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm.nii'];
     source_seq = ['dti_tensor_' tensor_dir{i}];
     if i == 1
         flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -omat invol2refvol.mat -v'];
-        system(flirt_coreg)
     else
         flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -init invol2refvol.mat -applyxfm -v'];
-        system(flirt_coreg)
-    end
+    
 end
 %%
 gunzip('rdti_tensor.nii.gz')
