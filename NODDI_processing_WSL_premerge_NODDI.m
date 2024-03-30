@@ -424,7 +424,7 @@ tool.setMask(mask);
 % gunzip('MNI152_T1_1mm_brain.nii.gz')
 % cd(dataset_directory)
 
-%% MNI Analysis
+%% MNI Analysis %%
 
 % coregister T1 MPRAGE to NODDI
 source_seq = ['anat_seq_brain_mask.nii'];
@@ -454,13 +454,11 @@ ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
 system(flirt_coreg)
 
-%%
-
 %% Create atlas masks on FSL %%
 
 %% Binarize masks
-mask_list = {'Caudate','Cerebellum','Frontal Lobe','Insula','Occipital Lobe','Parietal Lobe',...
-    'Putamen','Temporal Lobe','Thalamus'};
+mask_list = {'Caudate','Cerebellum','Frontal_Lobe','Insula','Occipital_Lobe','Parietal_Lobe',...
+    'Putamen','Temporal_Lobe','Thalamus'};
 
 for n = 1:length(mask_list)
     mask = mask_list{n};
@@ -468,26 +466,160 @@ for n = 1:length(mask_list)
     system(fsl_maths)
 end
 
-%% Extract data from NODDI sequences
-source_seq_list = {'r_Case1_ficvf.nii.gz','r_Case1_fiso.nii.gz','r_Case1_odi.nii.gz'};
+%% Extract data from NODDI sequences fiso = FWF, ficvf = NDI
+source_seq_list = {'r_Case1_ficvf','r_Case1_fiso','r_Case1_odi'};
 
-fslstats = ['fslstats r_Case1_ficvf -k mni_prob_caudate_bin.nii.gz -V -M -S -h 20 >intensities.txt'];
+for n = 1:length(source_seq_list)
+    source_seq = source_seq_list{n};
+    if n ==1 
+        for m = 1:length(mask_list)
+            %generate voxel number, mean, and SD for each brain region
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k mni_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+            %Tabulate data
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Tndi = cell2table (intensities, 'VariableNames', {'Voxels_ndi','Volumes_ndi','NDI Mean','SD_ndi'});
+
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_ndi','Volumes_ndi','NDI Mean','SD_ndi'});
+                Tndi = [Tndi;T2];
+            end
+            
+            %Extract raw intensity values per voxel for each brain region
+            fsl_meants = ['fslmeants -i ' source_seq ' -m mni_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            raw_values = importdata('out1.txt');
+            raw_values = num2cell(raw_values);
+
+            if m == 1
+                Trv_ndi = [{['NDI_' mask]}, raw_values];
+            else
+
+                Trv_ndi = [Trv_ndi [{['NDI_' mask]}, raw_values]];                
+            end
+        end
+    end
+
+    if n == 2
+        for m = 1:length(mask_list)
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k mni_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Tfwf = cell2table (intensities, 'VariableNames', {'Voxels_fwf','Volumes_fwf','FWF Mean','SD_fwf'});
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_fwf','Volumes_fwf','FWF Mean','SD_fwf'});
+                Tfwf = [Tfwf;T2];
+            end
+
+            %Extract raw intensity values per voxel for each brain region
+            fsl_meants = ['fslmeants -i ' source_seq ' -m mni_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            raw_values = importdata('out1.txt');
+            raw_values = num2cell(raw_values);
+
+            if m == 1
+                Trv_fwf = [{['FWF_' mask]}, raw_values];
+            else
+
+                Trv_fwf = [Trv_fwf [{['FWF_' mask]}, raw_values]];                
+            end
+        end
+    end
+
+    if n == 3
+        for m = 1:length(mask_list)
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k mni_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Todi = cell2table (intensities, 'VariableNames', {'Voxels_odi','Volumes_odi','ODI Mean','SD_odi'});
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_odi','Volumes_odi','ODI Mean','SD_odi'});
+                Todi = [Todi;T2];
+            end
+
+            %Extract raw intensity values per voxel for each brain region
+            fsl_meants = ['fslmeants -i ' source_seq ' -m mni_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            raw_values = importdata('out1.txt');
+            raw_values = num2cell(raw_values);
+            
+            if m == 1
+                Trv_odi = [{['ODI_' mask]}, raw_values];
+            else
+
+                Trv_odi = [Trv_odi [{['ODI_' mask]}, raw_values]];                
+            end
+        end
+    end
+end
+
+mask_list_key = {'Caudate';'Cerebellum';'Frontal_Lobe';'Insula';'Occipital_Lobe';'Parietal_Lobe';...
+    'Putamen';'Temporal_Lobe';'Thalamus'};
+
+key = cell2table(mask_list_key, 'VariableNames',{'Region'});
+
+Tndi = [key, Tndi];
+Todi = [key, Todi];
+Tfwf = [key, Tfwf];
+
+Tjoin = join(Tndi, Todi);
+T_combined = join(Tjoin, Tfwf);
+writetable(T_combined, 'NODDI_indices.csv')
+%%
+Trv_ndi = Trv_ndi';
+%%
+writecell(Trv_ndi, 'NDI_raw_intensities.csv')
+
+%%
+fslstats = ['fslstats r_Case1_ficvf -k mni_prob_caudate_bin.nii.gz -V -M -S >data.txt'];
 system(fslstats)
+intensities = num2cell(importdata('data.txt'));
+
+T = cell2table (intensities,'VariableNames', {'Voxels','Volumes','Mean','SD'} );
 
 %%
-fsl_meants = ['fslmeants -i r_Case1_ficvf.nii -m mni_prob_Caudate_bin.nii.gz -o out.txt --showall'];
+fsl_meants = ['fslmeants -i r_Case1_ficvf.nii -m mni_prob_Caudate_bin.nii.gz -o out.txt --showall | tail -1'];
 system(fsl_meants)
+system('tail -1 out.txt >out1.txt')
+raw_values = importdata('out1.txt');
+raw_values = [{'NDI_Caudate'}, raw_values];
+writecell(raw_values, 'test.csv')
 %%
-tail = ['tail -1 out.txt'];
+
+raw_values = num2cell(raw_values');
+
+raw_values1 = importdata('out1.txt');
+
+raw_values1 = num2cell(raw_values1');
+
+raw_values = [raw_values [{'NDI_Thalamus'};raw_values1]];
+writecell(raw_values, 'test.csv')
+
+
+%%
+raw_values1 = importdata('out1.txt');
+raw_values1 = num2cell(raw_values1');
+csvwrite('test.csv',raw_values1)
+
+%%
+tail = ['head -3 out.txt'];
 system(tail)
 
 intensities = importdata('out.csv');
 %%
-
-
-fsl_meants = ['fslmeants -i ' Dyy ' -m sphere_bin.nii.gz -o out.txt'];
-system(fsl_meants)
-Dyy_proj = importdata('out.txt');
 
 
 
