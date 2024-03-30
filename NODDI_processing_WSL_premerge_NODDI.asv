@@ -217,22 +217,155 @@ end
 
 %% coregister to atlas JHU FA atlas
 
-source_seq = ['dti_tensor_Dxx'];
+%% Coreg FA map
+fa_map = 'dti_FA';
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -omat invol2refvol.mat -v' ];
+
+flirt_coreg = ['flirt -in ' fa_map ' -ref ' ref_seq ' -out r' fa_map ' -omat invol2refvol.mat -v'];
 system(flirt_coreg)
 
+%% Coreg diffusivity maps based on FA registration matrix
 for i = 1:length(tensor_dir)
-    ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm.nii'];
     source_seq = ['dti_tensor_' tensor_dir{i}];
-    if i == 1
-        flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -omat invol2refvol.mat -v'];
-    else
-        flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -init invol2refvol.mat -applyxfm -v'];
-    
+
+    flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -init invol2refvol.mat -applyxfm -v'];
+    system(flirt_coreg)
 end
-%%
-gunzip('rdti_tensor.nii.gz')
+
+%% Create 5mm spherical ROI and extract values (SLF=association, SCR=projection)
+
+% Single voxel ROI
+roi_L_SLF = '128 1 110 1 99 1 0 1';
+roi_L_SCR = '116 1 110 1 99 1 0 1';
+roi_R_SLF = '51 1 110 1 99 1 0 1';
+roi_R_SCR = '64 1 110 1 99 1 0 1';
+
+Dxx = 'rdti_tensor_Dxx.nii.gz';
+Dyy = 'rdti_tensor_Dyy.nii.gz';
+Dzz = 'rdti_tensor_Dzz.nii.gz';
+
+% Left Dxx projection
+fsl_maths = ['fslmaths ' ref_seq ' -mul 0 -add 1 -roi ' roi_L_SCR ' ROI.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+system(fsl_maths)
+
+fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dxx_assoc = importdata('out.txt');
+
+% Left Dxx association
+fsl_maths = ['fslmaths ' ref_seq ' -mul 0 -add 1 -roi ' roi_L_SLF ' ROI.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+system(fsl_maths)
+
+fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dxx_proj = importdata('out.txt');
+
+% Left Dyy projection
+fsl_maths = ['fslmaths ' ref_seq ' -mul 0 -add 1 -roi ' roi_L_SCR ' ROI.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+system(fsl_maths)
+
+fsl_meants = ['fslmeants -i ' Dyy ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dyy_proj = importdata('out.txt');
+
+% Left Dzz association
+fsl_maths = ['fslmaths ' ref_seq ' -mul 0 -add 1 -roi ' roi_L_SLF ' ROI.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+system(fsl_maths)
+
+fsl_meants = ['fslmeants -i ' Dzz ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dzz_assoc = importdata('out.txt');
+
+DTI_ALPS_left = ((Dxx_proj+Dxx_assoc)/2)/((Dyy_proj+Dzz_assoc)/2);
+
+
+% Right Dxx projection
+fsl_maths = ['fslmaths ' ref_seq ' -mul 0 -add 1 -roi ' roi_R_SCR ' ROI.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+system(fsl_maths)
+
+fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dxx_assoc = importdata('out.txt');
+
+% Right Dxx association
+fsl_maths = ['fslmaths ' ref_seq ' -mul 0 -add 1 -roi ' roi_R_SLF ' ROI.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+system(fsl_maths)
+
+fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dxx_proj = importdata('out.txt');
+
+% Right Dyy projection
+fsl_maths = ['fslmaths ' ref_seq ' -mul 0 -add 1 -roi ' roi_R_SCR ' ROI.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+system(fsl_maths)
+
+fsl_meants = ['fslmeants -i ' Dyy ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dyy_proj = importdata('out.txt');
+
+% Right Dzz association
+fsl_maths = ['fslmaths ' ref_seq ' -mul 0 -add 1 -roi ' roi_R_SLF ' ROI.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
+system(fsl_maths)
+
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+system(fsl_maths)
+
+fsl_meants = ['fslmeants -i ' Dzz ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dzz_assoc = importdata('out.txt');
+
+DTI_ALPS_right = ((Dxx_proj+Dxx_assoc)/2)/((Dyy_proj+Dzz_assoc)/2);
+
+Indices = ["DTI_ALPS_left";"DTI_ALPS_right"];
+Values = [DTI_ALPS_right; DTI_ALPS_left];
+
+T = table(Indices, Values);
+writetable(T, 'DTI_ALPS.csv')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% NODDI Toolbox analysis %%
@@ -244,11 +377,18 @@ cd(dataset_directory)
 
 b0_roi = ['fslroi ' 'data_eddy_unwarped ' 'NODDI_data_b0 ' '0 1'];
 system(b0_roi)
-%%
+
+%% (adjust f and g, higher f (0-1) value is more stringent, higher g (-1-1) means more stringent at top, more liberal at bottom)
 NODDI_bet = ['bet ' 'NODDI_data_b0 ' 'b0_bet_mask' ' -A2 ' t2 ' -R -f 0.5 -v'];
 system(NODDI_bet)
-b0_bet_mask = 'b0_bet_mask';
 
+V = niftiread(['NODDI_data_b0.nii.gz']);
+mask = niftiread('b0_bet_mask.nii.gz');
+tool = imtool3D(V);
+tool.setMask(mask);
+
+b0_bet_mask = 'b0_bet_mask';
+%%
 gunzip('NODDI_data_b0.nii.gz')
 gunzip('b0_bet_mask.nii.gz')
 gunzip('data_eddy_unwarped.nii.gz')
@@ -269,7 +409,7 @@ SaveParamsAsNIfTI('FittedParams.mat', 'NODDI_roi.mat', 'b0_bet_mask.nii', 'Case1
 %% Extract brain from MPRAGE anatomical sequence %%
 anat_seq = 'DICOM_Sag_MP-Rage_20240109112943_201';
 
-bet = ['bet ' anat_seq ' anat_seq_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -v'];
+bet = ['bet ' anat_seq ' anat_seq_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -g -0.22 -v'];
 system(bet)
 brain_mask = 'anat_seq_brain_mask';
 
@@ -277,44 +417,79 @@ V = niftiread([anat_seq '.nii.gz']);
 mask = niftiread('anat_seq_brain_mask.nii.gz');
 tool = imtool3D(V);
 tool.setMask(mask); 
+%%
 
-gunzip('anat_seq_brain_mask.nii.gz')
+%% extract atlases 
+% cd('/usr/local/fsl/data/standard')
+% gunzip('MNI152_T1_1mm_brain.nii.gz')
+% cd(dataset_directory)
 
-%% extract atlases %%
+%% MNI Analysis
 
-cd('/usr/local/fsl/data/standard')
-
-gunzip('MNI152_T1_1mm_brain.nii.gz')
-
-cd(dataset_directory)
-
-%% Set origin of MPRAGE sequence to anterior commissure with SPM %%
-spm
-
-%% coregister MPRAGE and NODDI seqs to MNI atlas using FLIRT %% ***
+% coregister T1 MPRAGE to NODDI
 source_seq = ['anat_seq_brain_mask.nii'];
-ref_seq = ['/usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -omat invol2refvol.mat -v' ];
+ref_seq = ['Case1_ficvf.nii'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
 system(flirt_coreg)
-gunzip('ranat_seq_brain_mask.nii.gz')
 
-source_seq = ['Case1_ficvf.nii'];
-ref_seq = ['/usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -omat invol2refvol.mat -v' ];
+% coregister NODDI-registered T1 MPRAGE to atlas
+source_seq = ['r_noddi_anat_seq_brain_mask.nii'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -omat invol2refvol.mat -v' ];
 system(flirt_coreg)
-gunzip('rCase1_ficvf.nii.gz')
+
+% apply transformation matrix to NODDI 
+source_seq = ['Case1_ficvf.nii'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
 
 source_seq = ['Case1_fiso.nii'];
-ref_seq = ['/usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -omat invol2refvol.mat -v' ];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
 system(flirt_coreg)
-gunzip('rCase1_fiso.nii.gz')
 
 source_seq = ['Case1_odi.nii'];
-ref_seq = ['/usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r' source_seq ' -omat invol2refvol.mat -v' ];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
 system(flirt_coreg)
-gunzip('rCase1_odi.nii.gz')
+
+%%
+
+%% Create atlas masks on FSL %%
+
+%% Binarize masks
+mask_list = {'Caudate','Cerebellum','Frontal Lobe','Insula','Occipital Lobe','Parietal Lobe',...
+    'Putamen','Temporal Lobe','Thalamus'};
+
+for n = 1:length(mask_list)
+    mask = mask_list{n};
+    fsl_maths = ['fslmaths mni_prob_' mask '.nii.gz -bin mni_prob_' mask '_bin.nii.gz'];
+    system(fsl_maths)
+end
+
+%% Extract data from NODDI sequences
+source_seq_list = {'r_Case1_ficvf.nii.gz','r_Case1_fiso.nii.gz','r_Case1_odi.nii.gz'};
+
+fslstats = ['fslstats r_Case1_fcivf -k mni_prob_caudate_bin.nii.gz -V -M -S -H'];
+system(fslstats)
+
+%%
+fsl_meants = ['fslmeants -i r_Case1_ficvf.nii -m mni_prob_Caudate_bin.nii.gz -o out.txt --showall'];
+system(fsl_meants)
+%%
+tail = ['tail -1 out.txt'];
+system(tail)
+
+intensities = importdata('out.csv');
+%%
+
+
+fsl_meants = ['fslmeants -i ' Dyy ' -m sphere_bin.nii.gz -o out.txt'];
+system(fsl_meants)
+Dyy_proj = importdata('out.txt');
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
