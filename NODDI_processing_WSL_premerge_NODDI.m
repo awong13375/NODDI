@@ -626,15 +626,15 @@ writetable(Trv_ndi, 'MNI_NDI_raw_intensities.csv')
 writetable(Trv_fwf, 'MNI_FWF_raw_intensities.csv')
 writetable(Trv_odi, 'MNI_ODI_raw_intensities.csv')
 
-
-
-
-%% Harvard Oxford Analysis %%
+%% Segmentation for Havard Oxford and John Hopkins analysis
 
 % FAST segmentation (0 = CSF, 1 = GM, 2 = WM)
 source_seq = ['anat_seq_brain_mask.nii.gz'];
 fast_seg = ['fast -B -S 1 -n 3 -t 1 -v ' source_seq];
 system(fast_seg)
+
+
+%% Harvard Oxford Analysis %%
 
 %% Cortical/Grey Matter Analysis
 
@@ -1482,6 +1482,508 @@ writetable(T_combined, 'HO_subcort_NODDI_indices.csv')
 writetable(Trv_ndi, 'HO_subcort_NDI_raw_intensities.csv')
 writetable(Trv_fwf, 'HO_subcort_FWF_raw_intensities.csv')
 writetable(Trv_odi, 'HO_subcort_ODI_raw_intensities.csv')
+
+
+%% John Hopkins Analysis %%
+
+%% Cortical/Grey Matter Analysis
+
+% coregister GM mask to NODDI
+source_seq = ['anat_seq_brain_mask_pve_1'];
+ref_seq = ['Case1_ficvf'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
+system(flirt_coreg)
+
+% Extract GM from NODDI using GM mask
+GM_mask = ['r_noddi_anat_seq_brain_mask_pve_1'];
+fsl_maths = ['fslmaths ' GM_mask ' -bin ' GM_mask '_bin.nii.gz'];
+
+ref_seq = ['Case1_ficvf'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+system(fslmaths)
+
+ref_seq = ['Case1_fiso'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+system(fslmaths)
+
+ref_seq = ['Case1_odi'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+system(fslmaths)
+
+% coregister NODDI-registered GM mask to Cortical atlas
+source_seq = ['r_noddi_anat_seq_brain_mask_pve_1.nii'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
+system(flirt_coreg)
+
+% apply transformation matrix to NODDI 
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
+
+source_seq = ['Case1_ficvf_GM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+source_seq = ['Case1_fiso_GM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+source_seq = ['Case1_odi_GM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+%%
+
+%% Create atlas masks on FSL %%
+
+%% Binarize masks
+
+%% WILL BREAK CODE -> Manually edit Heschel's gyrus and remove apostrophe %%
+
+% Remove symbols so code won't break
+mask_list = {''};
+
+for n = 1:length(mask_list)
+    mask = mask_list{n};
+    instring = ['harvardoxford-cortical_prob_' mask '.nii.gz'];
+    outstring = regexprep(instring, ' ', '_');
+    outstring = regexprep(outstring, '(','');
+    outstring = regexprep(outstring, ')','');
+    outstring = regexprep(outstring, ',','');
+
+    if isfile(instring) == 0
+        continue
+    else
+        movefile(instring, outstring)
+    end
+end
+
+mask_list = regexprep(mask_list, ' ', '_');
+mask_list = regexprep(mask_list, '(','');
+mask_list = regexprep(mask_list, ')','');
+mask_list = regexprep(mask_list, ',','');
+
+% binarize masks
+for n = 1:length(mask_list)
+    mask = mask_list{n};
+    fsl_maths = ['fslmaths harvardoxford-cortical_prob_' mask '.nii.gz -bin harvardoxford-cortical_prob_' mask '_bin.nii.gz'];
+    system(fsl_maths)
+end
+
+%% Extract data from NODDI sequences 
+source_seq_list = {'r_Case1_ficvf_GM','r_Case1_fiso_GM','r_Case1_odi_GM'};
+
+for n = 1:length(source_seq_list)
+    source_seq = source_seq_list{n};
+    if n ==1 
+        for m = 1:length(mask_list)
+            %generate voxel number, mean, and SD for each brain region
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k harvardoxford-cortical_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+            %Tabulate data
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Tndi = cell2table (intensities, 'VariableNames', {'Voxels_ndi','Volumes_ndi','NDI Mean','SD_ndi'});
+
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_ndi','Volumes_ndi','NDI Mean','SD_ndi'});
+                Tndi = [Tndi;T2];
+            end
+            
+            %Extract raw intensity values per voxel for each brain region
+            fsl_meants = ['fslmeants -i ' source_seq ' -m harvardoxford-cortical_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            if m == 1
+                raw_values_1 = importdata('out1.txt');
+            elseif m == 2 
+                raw_values_2 = importdata('out1.txt');
+            elseif m == 3 
+                raw_values_3 = importdata('out1.txt');
+            elseif m == 4 
+                raw_values_4 = importdata('out1.txt');
+            elseif m == 5 
+                raw_values_5 = importdata('out1.txt');
+            elseif m == 6 
+                raw_values_6 = importdata('out1.txt');
+            elseif m == 7 
+                raw_values_7 = importdata('out1.txt');
+            elseif m == 8 
+                raw_values_8 = importdata('out1.txt');
+            elseif m == 9 
+                raw_values_9 = importdata('out1.txt');
+            elseif m == 10 
+                raw_values_10 = importdata('out1.txt');
+            elseif m == 11 
+                raw_values_11 = importdata('out1.txt');
+            elseif m == 12 
+                raw_values_12 = importdata('out1.txt');
+            elseif m == 13 
+                raw_values_13 = importdata('out1.txt');
+            elseif m == 14 
+                raw_values_14 = importdata('out1.txt');
+            elseif m == 15 
+                raw_values_15 = importdata('out1.txt');
+            elseif m == 16 
+                raw_values_16 = importdata('out1.txt');
+            elseif m == 17 
+                raw_values_17 = importdata('out1.txt');
+            elseif m == 18 
+                raw_values_18 = importdata('out1.txt');
+            elseif m == 19 
+                raw_values_19 = importdata('out1.txt');
+            elseif m == 20 
+                raw_values_20 = importdata('out1.txt');
+            elseif m == 21 
+                raw_values_21 = importdata('out1.txt');
+            elseif m == 22 
+                raw_values_22 = importdata('out1.txt');
+            elseif m == 23
+                raw_values_23 = importdata('out1.txt');
+            elseif m == 24 
+                raw_values_24 = importdata('out1.txt');
+            elseif m == 25 
+                raw_values_25 = importdata('out1.txt');
+            elseif m == 26 
+                raw_values_26 = importdata('out1.txt');
+            elseif m == 27 
+                raw_values_27 = importdata('out1.txt');
+            elseif m == 28 
+                raw_values_28 = importdata('out1.txt');
+            elseif m == 29 
+                raw_values_29 = importdata('out1.txt');
+            elseif m == 30 
+                raw_values_30 = importdata('out1.txt');
+            elseif m == 31 
+                raw_values_31 = importdata('out1.txt');
+            elseif m == 32 
+                raw_values_32 = importdata('out1.txt');
+            elseif m == 33 
+                raw_values_33 = importdata('out1.txt');
+            elseif m == 34
+                raw_values_34 = importdata('out1.txt');
+            elseif m == 35  
+                raw_values_35 = importdata('out1.txt');
+            elseif m == 36 
+                raw_values_36 = importdata('out1.txt');
+            elseif m == 37 
+                raw_values_37 = importdata('out1.txt');
+            elseif m == 38 
+                raw_values_38 = importdata('out1.txt');
+            elseif m == 39 
+                raw_values_39 = importdata('out1.txt');
+            elseif m == 40 
+                raw_values_40 = importdata('out1.txt');
+            elseif m == 41 
+                raw_values_41 = importdata('out1.txt');
+            elseif m == 42 
+                raw_values_42 = importdata('out1.txt');
+            elseif m == 43 
+                raw_values_43 = importdata('out1.txt');
+            elseif m == 44 
+                raw_values_44 = importdata('out1.txt');
+            elseif m == 45 
+                raw_values_45 = importdata('out1.txt');
+            elseif m == 46 
+                raw_values_46 = importdata('out1.txt');
+            elseif m == 47 
+                raw_values_47 = importdata('out1.txt');
+            elseif m == 48 
+                raw_values_48 = importdata('out1.txt');
+            end
+        end
+
+        Trv_ndi = num2cell(padcat(raw_values_1,raw_values_2,raw_values_3,raw_values_4, ...
+                  raw_values_5,raw_values_6,raw_values_7,raw_values_8,raw_values_9,raw_values_10,raw_values_11,raw_values_12,raw_values_13,...
+                  raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20,raw_values_21,raw_values_22,...
+                  raw_values_23,raw_values_24,raw_values_25,raw_values_26,raw_values_27,raw_values_28,raw_values_29,raw_values_30,raw_values_31,...
+                  raw_values_32,raw_values_33,raw_values_34,raw_values_35,raw_values_36,raw_values_37,raw_values_38,raw_values_39,raw_values_40,...
+                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48));
+        %Truncate names to max length
+        mask_list_trunc = regexp(mask_list, '^.{1,50}','match','once');
+
+        Trv_ndi = cell2table(Trv_ndi',"VariableNames", mask_list_trunc);
+    
+    end
+
+    if n == 2
+        for m = 1:length(mask_list)
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k harvardoxford-cortical_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Tfwf = cell2table (intensities, 'VariableNames', {'Voxels_fwf','Volumes_fwf','FWF Mean','SD_fwf'});
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_fwf','Volumes_fwf','FWF Mean','SD_fwf'});
+                Tfwf = [Tfwf;T2];
+            end
+
+            fsl_meants = ['fslmeants -i ' source_seq ' -m harvardoxford-cortical_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            if m == 1
+                raw_values_1 = importdata('out1.txt');
+            elseif m == 2 
+                raw_values_2 = importdata('out1.txt');
+            elseif m == 3 
+                raw_values_3 = importdata('out1.txt');
+            elseif m == 4 
+                raw_values_4 = importdata('out1.txt');
+            elseif m == 5 
+                raw_values_5 = importdata('out1.txt');
+            elseif m == 6 
+                raw_values_6 = importdata('out1.txt');
+            elseif m == 7 
+                raw_values_7 = importdata('out1.txt');
+            elseif m == 8 
+                raw_values_8 = importdata('out1.txt');
+            elseif m == 9 
+                raw_values_9 = importdata('out1.txt');
+            elseif m == 10 
+                raw_values_10 = importdata('out1.txt');
+            elseif m == 11 
+                raw_values_11 = importdata('out1.txt');
+            elseif m == 12 
+                raw_values_12 = importdata('out1.txt');
+            elseif m == 13 
+                raw_values_13 = importdata('out1.txt');
+            elseif m == 14 
+                raw_values_14 = importdata('out1.txt');
+            elseif m == 15 
+                raw_values_15 = importdata('out1.txt');
+            elseif m == 16 
+                raw_values_16 = importdata('out1.txt');
+            elseif m == 17 
+                raw_values_17 = importdata('out1.txt');
+            elseif m == 18 
+                raw_values_18 = importdata('out1.txt');
+            elseif m == 19 
+                raw_values_19 = importdata('out1.txt');
+            elseif m == 20 
+                raw_values_20 = importdata('out1.txt');
+            elseif m == 21 
+                raw_values_21 = importdata('out1.txt');
+            elseif m == 22 
+                raw_values_22 = importdata('out1.txt');
+            elseif m == 23
+                raw_values_23 = importdata('out1.txt');
+            elseif m == 24 
+                raw_values_24 = importdata('out1.txt');
+            elseif m == 25 
+                raw_values_25 = importdata('out1.txt');
+            elseif m == 26 
+                raw_values_26 = importdata('out1.txt');
+            elseif m == 27 
+                raw_values_27 = importdata('out1.txt');
+            elseif m == 28 
+                raw_values_28 = importdata('out1.txt');
+            elseif m == 29 
+                raw_values_29 = importdata('out1.txt');
+            elseif m == 30 
+                raw_values_30 = importdata('out1.txt');
+            elseif m == 31 
+                raw_values_31 = importdata('out1.txt');
+            elseif m == 32 
+                raw_values_32 = importdata('out1.txt');
+            elseif m == 33 
+                raw_values_33 = importdata('out1.txt');
+            elseif m == 34
+                raw_values_34 = importdata('out1.txt');
+            elseif m == 35  
+                raw_values_35 = importdata('out1.txt');
+            elseif m == 36 
+                raw_values_36 = importdata('out1.txt');
+            elseif m == 37 
+                raw_values_37 = importdata('out1.txt');
+            elseif m == 38 
+                raw_values_38 = importdata('out1.txt');
+            elseif m == 39 
+                raw_values_39 = importdata('out1.txt');
+            elseif m == 40 
+                raw_values_40 = importdata('out1.txt');
+            elseif m == 41 
+                raw_values_41 = importdata('out1.txt');
+            elseif m == 42 
+                raw_values_42 = importdata('out1.txt');
+            elseif m == 43 
+                raw_values_43 = importdata('out1.txt');
+            elseif m == 44 
+                raw_values_44 = importdata('out1.txt');
+            elseif m == 45 
+                raw_values_45 = importdata('out1.txt');
+            elseif m == 46 
+                raw_values_46 = importdata('out1.txt');
+            elseif m == 47 
+                raw_values_47 = importdata('out1.txt');
+            elseif m == 48 
+                raw_values_48 = importdata('out1.txt');
+            end
+        end
+
+        Trv_fwf = num2cell(padcat(raw_values_1,raw_values_2,raw_values_3,raw_values_4, ...
+                  raw_values_5,raw_values_6,raw_values_7,raw_values_8,raw_values_9,raw_values_10,raw_values_11,raw_values_12,raw_values_13,...
+                  raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20,raw_values_21,raw_values_22,...
+                  raw_values_23,raw_values_24,raw_values_25,raw_values_26,raw_values_27,raw_values_28,raw_values_29,raw_values_30,raw_values_31,...
+                  raw_values_32,raw_values_33,raw_values_34,raw_values_35,raw_values_36,raw_values_37,raw_values_38,raw_values_39,raw_values_40,...
+                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48));
+        
+        %Truncate names to max length
+        mask_list_trunc = regexp(mask_list, '^.{1,50}','match','once');
+        
+        Trv_fwf = cell2table(Trv_fwf',"VariableNames", mask_list_trunc);
+    end
+
+    if n == 3
+        for m = 1:length(mask_list)
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k harvardoxford-cortical_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Todi = cell2table (intensities, 'VariableNames', {'Voxels_odi','Volumes_odi','ODI Mean','SD_odi'});
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_odi','Volumes_odi','ODI Mean','SD_odi'});
+                Todi = [Todi;T2];
+            end
+
+            fsl_meants = ['fslmeants -i ' source_seq ' -m harvardoxford-cortical_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            if m == 1
+                raw_values_1 = importdata('out1.txt');
+            elseif m == 2 
+                raw_values_2 = importdata('out1.txt');
+            elseif m == 3 
+                raw_values_3 = importdata('out1.txt');
+            elseif m == 4 
+                raw_values_4 = importdata('out1.txt');
+            elseif m == 5 
+                raw_values_5 = importdata('out1.txt');
+            elseif m == 6 
+                raw_values_6 = importdata('out1.txt');
+            elseif m == 7 
+                raw_values_7 = importdata('out1.txt');
+            elseif m == 8 
+                raw_values_8 = importdata('out1.txt');
+            elseif m == 9 
+                raw_values_9 = importdata('out1.txt');
+            elseif m == 10 
+                raw_values_10 = importdata('out1.txt');
+            elseif m == 11 
+                raw_values_11 = importdata('out1.txt');
+            elseif m == 12 
+                raw_values_12 = importdata('out1.txt');
+            elseif m == 13 
+                raw_values_13 = importdata('out1.txt');
+            elseif m == 14 
+                raw_values_14 = importdata('out1.txt');
+            elseif m == 15 
+                raw_values_15 = importdata('out1.txt');
+            elseif m == 16 
+                raw_values_16 = importdata('out1.txt');
+            elseif m == 17 
+                raw_values_17 = importdata('out1.txt');
+            elseif m == 18 
+                raw_values_18 = importdata('out1.txt');
+            elseif m == 19 
+                raw_values_19 = importdata('out1.txt');
+            elseif m == 20 
+                raw_values_20 = importdata('out1.txt');
+            elseif m == 21 
+                raw_values_21 = importdata('out1.txt');
+            elseif m == 22 
+                raw_values_22 = importdata('out1.txt');
+            elseif m == 23
+                raw_values_23 = importdata('out1.txt');
+            elseif m == 24 
+                raw_values_24 = importdata('out1.txt');
+            elseif m == 25 
+                raw_values_25 = importdata('out1.txt');
+            elseif m == 26 
+                raw_values_26 = importdata('out1.txt');
+            elseif m == 27 
+                raw_values_27 = importdata('out1.txt');
+            elseif m == 28 
+                raw_values_28 = importdata('out1.txt');
+            elseif m == 29 
+                raw_values_29 = importdata('out1.txt');
+            elseif m == 30 
+                raw_values_30 = importdata('out1.txt');
+            elseif m == 31 
+                raw_values_31 = importdata('out1.txt');
+            elseif m == 32 
+                raw_values_32 = importdata('out1.txt');
+            elseif m == 33 
+                raw_values_33 = importdata('out1.txt');
+            elseif m == 34
+                raw_values_34 = importdata('out1.txt');
+            elseif m == 35  
+                raw_values_35 = importdata('out1.txt');
+            elseif m == 36 
+                raw_values_36 = importdata('out1.txt');
+            elseif m == 37 
+                raw_values_37 = importdata('out1.txt');
+            elseif m == 38 
+                raw_values_38 = importdata('out1.txt');
+            elseif m == 39 
+                raw_values_39 = importdata('out1.txt');
+            elseif m == 40 
+                raw_values_40 = importdata('out1.txt');
+            elseif m == 41 
+                raw_values_41 = importdata('out1.txt');
+            elseif m == 42 
+                raw_values_42 = importdata('out1.txt');
+            elseif m == 43 
+                raw_values_43 = importdata('out1.txt');
+            elseif m == 44 
+                raw_values_44 = importdata('out1.txt');
+            elseif m == 45 
+                raw_values_45 = importdata('out1.txt');
+            elseif m == 46 
+                raw_values_46 = importdata('out1.txt');
+            elseif m == 47 
+                raw_values_47 = importdata('out1.txt');
+            elseif m == 48 
+                raw_values_48 = importdata('out1.txt');
+            end
+        end
+
+        Trv_odi = num2cell(padcat(raw_values_1,raw_values_2,raw_values_3,raw_values_4, ...
+                  raw_values_5,raw_values_6,raw_values_7,raw_values_8,raw_values_9,raw_values_10,raw_values_11,raw_values_12,raw_values_13,...
+                  raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20,raw_values_21,raw_values_22,...
+                  raw_values_23,raw_values_24,raw_values_25,raw_values_26,raw_values_27,raw_values_28,raw_values_29,raw_values_30,raw_values_31,...
+                  raw_values_32,raw_values_33,raw_values_34,raw_values_35,raw_values_36,raw_values_37,raw_values_38,raw_values_39,raw_values_40,...
+                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48));
+        
+        %Truncate names to max length
+        mask_list_trunc = regexp(mask_list, '^.{1,50}','match','once');
+       
+        Trv_odi = cell2table(Trv_odi',"VariableNames",mask_list_trunc);
+    end
+end
+
+mask_list_key = mask_list';
+
+key = cell2table(mask_list_key, 'VariableNames',{'Region'});
+
+Tndi = [key, Tndi];
+Todi = [key, Todi];
+Tfwf = [key, Tfwf];
+
+Tjoin = join(Tndi, Todi);
+T_combined = join(Tjoin, Tfwf);
+%%
+writetable(T_combined, 'HO_cort_NODDI_indices.csv')
+%%
+writetable(Trv_ndi, 'HO_cort_NDI_raw_intensities.csv')
+writetable(Trv_fwf, 'HO_cort_FWF_raw_intensities.csv')
+writetable(Trv_odi, 'HO_cort_ODI_raw_intensities.csv')
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
