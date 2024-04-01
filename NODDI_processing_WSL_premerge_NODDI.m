@@ -1162,54 +1162,42 @@ writetable(Trv_odi, 'HO_cort_ODI_raw_intensities.csv')
 
 %% Subcortical/White Matter Analysis
 
-% coregister T1 to NODDI
-source_seq = ['anat_seq_brain_mask'];
-ref_seq = ['Case1_ficvf'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
-system(flirt_coreg)
-
-% apply matrix to WM mask 
+% Binarize and apply transformation matrix from MNI transformations to GM mask
 source_seq = ['anat_seq_brain_mask_pve_2'];
+fsl_maths = ['fslmaths ' source_seq ' -bin ' source_seq '_bin.nii.gz'];
+system(fsl_maths)
+
+source_seq = ['anat_seq_brain_mask_pve_2_bin'];
 ref_seq = ['Case1_ficvf'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol_T1_NODDI.mat -v' ];
 system(flirt_coreg)
 
-% Extract WM from NODDI using WM mask
-WM_mask = ['r_noddi_anat_seq_brain_mask_pve_2'];
-ref_seq = ['Case1_ficvf'];
+source_seq = ['r_noddi_anat_seq_brain_mask_pve_2_bin'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
+
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol_T1_NODDI_MNI.mat -v' ];
+system(flirt_coreg)
+
+
+% Rebinarize mask and manually adjust threshold (higher is more stringent)
+WM_mask = ['r_MNI_r_noddi_anat_seq_brain_mask_pve_2_bin'];
+fsl_maths = ['fslmaths ' WM_mask ' -thr 0.55 -bin ' WM_mask '_bin.nii.gz'];
+system(fsl_maths)
+
+% Extract GM from NODDI using GM mask
+WM_mask = ['r_MNI_r_noddi_anat_seq_brain_mask_pve_2_bin_bin'];
+ref_seq = ['r_MNI_Case1_ficvf'];
 fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask ' ' ref_seq '_WM'];
 system(fslmaths)
 
-WM_mask = ['r_noddi_anat_seq_brain_mask_pve_2'];
-ref_seq = ['Case1_fiso'];
+ref_seq = ['r_MNI_Case1_fiso'];
 fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask ' ' ref_seq '_WM'];
 system(fslmaths)
 
-WM_mask = ['r_noddi_anat_seq_brain_mask_pve_2'];
-ref_seq = ['Case1_odi'];
+ref_seq = ['r_MNI_Case1_odi'];
 fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask ' ' ref_seq '_WM'];
 system(fslmaths)
-
-% coregister NODDI-registered T1 to Subcortical atlas
-source_seq = ['r_noddi_anat_seq_brain_mask.nii'];
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/HarvardOxford-sub-maxprob-thr0-1mm'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
-system(flirt_coreg)
-
-% apply transformation matrix to NODDI 
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/HarvardOxford-sub-maxprob-thr0-1mm'];
-
-source_seq = ['Case1_ficvf_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-source_seq = ['Case1_fiso_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-source_seq = ['Case1_odi_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
 %%
 
 %% Create atlas masks on FSL %%
@@ -1254,7 +1242,7 @@ for n = 1:length(mask_list)
 end
 
 %% Extract data from NODDI sequences 
-source_seq_list = {'r_Case1_ficvf_WM','r_Case1_fiso_WM','r_Case1_odi_WM'};
+source_seq_list = {'r_MNI_Case1_ficvf_WM','r_MNI_Case1_fiso_WM','r_MNI_Case1_odi_WM'};
 
 for n = 1:length(source_seq_list)
     source_seq = source_seq_list{n};
