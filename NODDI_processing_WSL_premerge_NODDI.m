@@ -1488,114 +1488,34 @@ writetable(Trv_odi, 'HO_subcort_ODI_raw_intensities.csv')
 
 %% John Hopkins Analysis (DTI based atlases) %%
 
-%% WM Labels Analysis
-
-% coregister T1 to NODDI
-source_seq = ['anat_seq_brain_mask'];
-ref_seq = ['Case1_ficvf'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
-system(flirt_coreg)
-
-% apply matrix to GM mask 
-source_seq = ['anat_seq_brain_mask_pve_1'];
-ref_seq = ['Case1_ficvf'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-% Extract GM from NODDI using GM mask
-GM_mask = ['r_noddi_anat_seq_brain_mask_pve_1'];
-ref_seq = ['Case1_ficvf'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
-system(fslmaths)
-
-GM_mask = ['r_noddi_anat_seq_brain_mask_pve_1'];
-ref_seq = ['Case1_fiso'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
-system(fslmaths)
-
-GM_mask = ['r_noddi_anat_seq_brain_mask_pve_1'];
-ref_seq = ['Case1_odi'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
-system(fslmaths)
-
-% coregister NODDI-registered T1 to Subcortical atlas
-source_seq = ['r_noddi_anat_seq_brain_mask.nii'];
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
-system(flirt_coreg)
-
-% apply transformation matrix to NODDI 
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
-
-source_seq = ['Case1_ficvf_GM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-source_seq = ['Case1_fiso_GM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-source_seq = ['Case1_odi_GM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-
-%%
-
-% coregister T1 MPRAGE to NODDI
-source_seq = ['anat_seq_brain_mask'];
-ref_seq = ['Case1_odi'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
-system(flirt_coreg)
-
-% apply transformation matrix to WM mask
-source_seq = ['anat_seq_brain_mask_pve_2'];
-ref_seq = ['Case1_odi'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-% Extract WM from NODDI using WM mask
-WM_mask = ['r_noddi_anat_seq_brain_mask_pve_2'];
-fsl_maths = ['fslmaths ' WM_mask ' -bin ' WM_mask '_bin.nii.gz'];
-
-ref_seq = ['Case1_ficvf'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
-system(fslmaths)
-
-ref_seq = ['Case1_fiso'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
-system(fslmaths)
-
-ref_seq = ['Case1_odi'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
-system(fslmaths)
+%% Labels Analysis
 
 %%
 % coregister DTI tensor to JHU atlas
-source_seq = ['dti_tensor'];
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-DWI-1mm'];
+source_seq = ['dti_FA'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -omat invol2refvol_DTI_JHU.mat -v' ];
 system(flirt_coreg)
 
 % coregister T1 MPRAGE to DTI tensor
 source_seq = ['anat_seq_brain_mask'];
-ref_seq = ['dti_tensor'];
+ref_seq = ['dti_FA'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_dti_' source_seq ' -omat invol2refvol_T1_DTI.mat -v' ];
 system(flirt_coreg)
 
 % apply transformation matrix to WM mask
 source_seq = ['anat_seq_brain_mask_pve_2'];
-ref_seq = ['dti_tensor'];
+ref_seq = ['dti_FA'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_dti_' source_seq ' -init invol2refvol_T1_DTI.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 source_seq = ['r_dti_anat_seq_brain_mask_pve_2'];
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-DWI-1mm'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -init invol2refvol_DTI_JHU.mat -applyxfm -v' ];
 system(flirt_coreg)
-%%
+
 % apply transformation matrix to NODDI 
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-DWI-1mm'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm'];
 
 source_seq = ['Case1_ficvf'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -init invol2refvol_DTI_JHU.mat -applyxfm -v' ];
@@ -1608,12 +1528,12 @@ system(flirt_coreg)
 source_seq = ['Case1_odi'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -init invol2refvol_DTI_JHU.mat -applyxfm -v' ];
 system(flirt_coreg)
-%%
+
 % Extract WM from NODDI using WM mask
 WM_mask = ['r_JHU_r_dti_anat_seq_brain_mask_pve_2'];
 fslmaths = ['fslmaths ' WM_mask ' -thr 0.4 -bin ' WM_mask '_bin.nii.gz'];
 system(fslmaths)
-%%
+
 ref_seq = ['r_JHU_Case1_ficvf'];
 fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
 system(fslmaths)
@@ -1625,34 +1545,46 @@ system(fslmaths)
 ref_seq = ['r_JHU_Case1_odi'];
 fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
 system(fslmaths)
-
 %%
-% rotate/translate image to fine tune coregistration using 3D slicer
-V = niftiread('r_JHU_Case1_ficvf_WM');
-V = imrotate(V, 359.98);
-niftiwrite(V, 'r_JHU_Case1_ficvf_WM_rot')
+
 %% Create atlas masks on FSL %%
 
 %% Binarize masks
 
-%% WILL BREAK CODE -> Manually edit Heschel's gyrus and remove apostrophe %%
+%% WILL BREAK CODE -> Manually cut short file name for fornix cres, superior frontal occipital fasciculus, sagittal stratum  %%
 
 % Remove symbols so code won't break
-mask_list = {''};
+mask_list = {'Anterior corona radiata L','Anterior corona radiata R','Superior corona radiata R','Superior corona radiata L',...
+    'Retrolenticular part of internal capsule L','Retrolenticular part of internal capsule R',...
+    'Posterior limb of internal capsule L','Posterior limb of internal capsule R','Anterior limb of internal capsule L',...
+    'Anterior limb of internal capsule R','Cerebral peduncle L','Cerebral peduncle R','Superior cerebellar peduncle L','Superior cerebellar peduncle R',...
+    'Inferior cerebellar peduncle L','Inferior cerebellar peduncle R','Medial lemniscus L','Medial lemniscus R','Corticospinal tract L',...
+    'Corticospinal tract R','Fornix (column and body of fornix)','Splenium of corpus callosum','Body of corpus callosum','Genu of corpus callosum',...
+    'Pontine crossing tract (a part of MCP)','Middle cerebellar peduncle','Tapetum L','Tapetum R','Uncinate fasciculus L','Uncinate fasciculus R'...
+    'Inferior fronto-occipital fasciculus L','Inferior fronto-occipital fasciculus R','Superior fronto-occipital fasciculus L',...
+    'Superior fronto-occipital fasciculus R','Superior longitudinal fasciculus L','Superior longitudinal fasciculus R',...
+    'Fornix (cres) L','Fornix (cres) R',...
+    'Cingulum (hippocampus) L','Cingulum (hippocampus) R','Cingulum (cingulate gyrus) L','Cingulum (cingulate gyrus) R','External capsule L',...
+    'External capsule R','Sagittal stratum R',...
+    'Sagittal stratum L',...
+    'Posterior thalamic radiation (include optic radiation) L','Posterior thalamic radiation (include optic radiation) R'...
+    'Posterior corona radiata L','Posterior corona radiata R'};
 
 for n = 1:length(mask_list)
     mask = mask_list{n};
-    instring = ['harvardoxford-cortical_prob_' mask '.nii.gz'];
+    instring = ['jhu-labels_label_' mask '.nii.gz'];
     outstring = regexprep(instring, ' ', '_');
     outstring = regexprep(outstring, '(','');
     outstring = regexprep(outstring, ')','');
     outstring = regexprep(outstring, ',','');
-
     if isfile(instring) == 0
+        continue
+    elseif instring == outstring
         continue
     else
         movefile(instring, outstring)
     end
+
 end
 
 mask_list = regexprep(mask_list, ' ', '_');
@@ -1663,12 +1595,12 @@ mask_list = regexprep(mask_list, ',','');
 % binarize masks
 for n = 1:length(mask_list)
     mask = mask_list{n};
-    fsl_maths = ['fslmaths harvardoxford-cortical_prob_' mask '.nii.gz -bin harvardoxford-cortical_prob_' mask '_bin.nii.gz'];
+    fsl_maths = ['fslmaths jhu-labels_label_' mask '.nii.gz -bin jhu-labels_label_' mask '_bin.nii.gz'];
     system(fsl_maths)
 end
 
 %% Extract data from NODDI sequences 
-source_seq_list = {'r_Case1_ficvf_GM','r_Case1_fiso_GM','r_Case1_odi_GM'};
+source_seq_list = {'r_JHU_Case1_ficvf_WM','r_JHU_Case1_fiso_WM','r_JHU_Case1_odi_WM'};
 
 for n = 1:length(source_seq_list)
     source_seq = source_seq_list{n};
@@ -1676,7 +1608,7 @@ for n = 1:length(source_seq_list)
         for m = 1:length(mask_list)
             %generate voxel number, mean, and SD for each brain region
             mask = mask_list{m};
-            fslstats = ['fslstats ' source_seq ' -k harvardoxford-cortical_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            fslstats = ['fslstats ' source_seq ' -k jhu-labels_label_' mask '_bin.nii.gz -V -M -S >data.txt'];
             system(fslstats)
             %Tabulate data
             if m == 1
@@ -1690,7 +1622,7 @@ for n = 1:length(source_seq_list)
             end
             
             %Extract raw intensity values per voxel for each brain region
-            fsl_meants = ['fslmeants -i ' source_seq ' -m harvardoxford-cortical_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            fsl_meants = ['fslmeants -i ' source_seq ' -m jhu-labels_label_' mask '_bin.nii.gz -o out.txt --showall'];
             system(fsl_meants)
             system('tail -1 out.txt >out1.txt')
             if m == 1
@@ -1789,6 +1721,11 @@ for n = 1:length(source_seq_list)
                 raw_values_47 = importdata('out1.txt');
             elseif m == 48 
                 raw_values_48 = importdata('out1.txt');
+            elseif m == 49 
+                raw_values_49 = importdata('out1.txt');
+            elseif m == 50 
+                raw_values_50 = importdata('out1.txt');
+
             end
         end
 
@@ -1797,9 +1734,10 @@ for n = 1:length(source_seq_list)
                   raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20,raw_values_21,raw_values_22,...
                   raw_values_23,raw_values_24,raw_values_25,raw_values_26,raw_values_27,raw_values_28,raw_values_29,raw_values_30,raw_values_31,...
                   raw_values_32,raw_values_33,raw_values_34,raw_values_35,raw_values_36,raw_values_37,raw_values_38,raw_values_39,raw_values_40,...
-                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48));
+                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48,raw_values_49,...
+                  raw_values_50));
         %Truncate names to max length
-        mask_list_trunc = regexp(mask_list, '^.{1,50}','match','once');
+        mask_list_trunc = regexp(mask_list, '^.{1,63}','match','once');
 
         Trv_ndi = cell2table(Trv_ndi',"VariableNames", mask_list_trunc);
     
@@ -1808,7 +1746,7 @@ for n = 1:length(source_seq_list)
     if n == 2
         for m = 1:length(mask_list)
             mask = mask_list{m};
-            fslstats = ['fslstats ' source_seq ' -k harvardoxford-cortical_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            fslstats = ['fslstats ' source_seq ' -k jhu-labels_label_' mask '_bin.nii.gz -V -M -S >data.txt'];
             system(fslstats)
             if m == 1
                 intensities = num2cell(importdata('data.txt'));
@@ -1819,7 +1757,7 @@ for n = 1:length(source_seq_list)
                 Tfwf = [Tfwf;T2];
             end
 
-            fsl_meants = ['fslmeants -i ' source_seq ' -m harvardoxford-cortical_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            fsl_meants = ['fslmeants -i ' source_seq ' -m jhu-labels_label_' mask '_bin.nii.gz -o out.txt --showall'];
             system(fsl_meants)
             system('tail -1 out.txt >out1.txt')
             if m == 1
@@ -1918,6 +1856,10 @@ for n = 1:length(source_seq_list)
                 raw_values_47 = importdata('out1.txt');
             elseif m == 48 
                 raw_values_48 = importdata('out1.txt');
+            elseif m == 49 
+                raw_values_49 = importdata('out1.txt');
+            elseif m == 50 
+                raw_values_50 = importdata('out1.txt');
             end
         end
 
@@ -1926,10 +1868,11 @@ for n = 1:length(source_seq_list)
                   raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20,raw_values_21,raw_values_22,...
                   raw_values_23,raw_values_24,raw_values_25,raw_values_26,raw_values_27,raw_values_28,raw_values_29,raw_values_30,raw_values_31,...
                   raw_values_32,raw_values_33,raw_values_34,raw_values_35,raw_values_36,raw_values_37,raw_values_38,raw_values_39,raw_values_40,...
-                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48));
+                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48,raw_values_49,...
+                  raw_values_50));
         
         %Truncate names to max length
-        mask_list_trunc = regexp(mask_list, '^.{1,50}','match','once');
+        mask_list_trunc = regexp(mask_list, '^.{1,63}','match','once');
         
         Trv_fwf = cell2table(Trv_fwf',"VariableNames", mask_list_trunc);
     end
@@ -1937,7 +1880,7 @@ for n = 1:length(source_seq_list)
     if n == 3
         for m = 1:length(mask_list)
             mask = mask_list{m};
-            fslstats = ['fslstats ' source_seq ' -k harvardoxford-cortical_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            fslstats = ['fslstats ' source_seq ' -k jhu-labels_label_' mask '_bin.nii.gz -V -M -S >data.txt'];
             system(fslstats)
 
             if m == 1
@@ -1949,7 +1892,7 @@ for n = 1:length(source_seq_list)
                 Todi = [Todi;T2];
             end
 
-            fsl_meants = ['fslmeants -i ' source_seq ' -m harvardoxford-cortical_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            fsl_meants = ['fslmeants -i ' source_seq ' -m jhu-labels_label_' mask '_bin.nii.gz -o out.txt --showall'];
             system(fsl_meants)
             system('tail -1 out.txt >out1.txt')
             if m == 1
@@ -2048,6 +1991,10 @@ for n = 1:length(source_seq_list)
                 raw_values_47 = importdata('out1.txt');
             elseif m == 48 
                 raw_values_48 = importdata('out1.txt');
+            elseif m == 49 
+                raw_values_49 = importdata('out1.txt');
+            elseif m == 50 
+                raw_values_50 = importdata('out1.txt');
             end
         end
 
@@ -2056,10 +2003,11 @@ for n = 1:length(source_seq_list)
                   raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20,raw_values_21,raw_values_22,...
                   raw_values_23,raw_values_24,raw_values_25,raw_values_26,raw_values_27,raw_values_28,raw_values_29,raw_values_30,raw_values_31,...
                   raw_values_32,raw_values_33,raw_values_34,raw_values_35,raw_values_36,raw_values_37,raw_values_38,raw_values_39,raw_values_40,...
-                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48));
+                  raw_values_41,raw_values_42,raw_values_43,raw_values_44,raw_values_45,raw_values_46,raw_values_47,raw_values_48,raw_values_49,...
+                  raw_values_50));
         
         %Truncate names to max length
-        mask_list_trunc = regexp(mask_list, '^.{1,50}','match','once');
+        mask_list_trunc = regexp(mask_list, '^.{1,63}','match','once');
        
         Trv_odi = cell2table(Trv_odi',"VariableNames",mask_list_trunc);
     end
@@ -2076,13 +2024,294 @@ Tfwf = [key, Tfwf];
 Tjoin = join(Tndi, Todi);
 T_combined = join(Tjoin, Tfwf);
 %%
-writetable(T_combined, 'HO_cort_NODDI_indices.csv')
+writetable(T_combined, 'JHU_label_NODDI_indices.csv')
 %%
-writetable(Trv_ndi, 'HO_cort_NDI_raw_intensities.csv')
-writetable(Trv_fwf, 'HO_cort_FWF_raw_intensities.csv')
-writetable(Trv_odi, 'HO_cort_ODI_raw_intensities.csv')
+writetable(Trv_ndi, 'JHU_label_NDI_raw_intensities.csv')
+writetable(Trv_fwf, 'JHU_label_FWF_raw_intensities.csv')
+writetable(Trv_odi, 'JHU_label_ODI_raw_intensities.csv')
 
 
+%% WM Tractography Analysis
+
+%% Use coregistered NODDI files from previous step
+
+%% Create atlas masks on FSL %%
+
+%% Binarize masks
+
+%% WILL BREAK CODE -> Manually cut short file name for fornix cres, superior frontal occipital fasciculus, sagittal stratum  %%
+
+% Remove symbols so code won't break
+mask_list = {'Superior longitudinal fasciculus (temporal part) R','Superior longitudinal fasciculus (temporal part) L','Uncinate fasciculus R',...
+    'Uncinate fasciculus L','Superior longitudinal fasciculus R','Superior longitudinal fasciculus L',...
+    'Inferior longitudinal fasciculus R','Inferior longitudinal fasciculus L','Inferior fronto-occipital fasciculus R','Inferior fronto-occipital fasciculus L',...
+    'Forceps minor','Forceps major','Cingulum (hippocampus) R','Cingulum (hippocampus) L','Cingulum (cingulate gyrus) R','Cingulum (cingulate gyrus) L',...
+    'Corticospinal tract R','Corticospinal tract L','Anterior thalamic radiation R','Anterior thalamic radiation L'};
+
+for n = 1:length(mask_list)
+    mask = mask_list{n};
+    instring = ['jhu-tracts_prob_' mask '.nii.gz'];
+    outstring = regexprep(instring, ' ', '_');
+    outstring = regexprep(outstring, '(','');
+    outstring = regexprep(outstring, ')','');
+    outstring = regexprep(outstring, ',','');
+    if isfile(instring) == 0
+        continue
+    else
+        movefile(instring, outstring)
+    end
+
+end
+
+mask_list = regexprep(mask_list, ' ', '_');
+mask_list = regexprep(mask_list, '(','');
+mask_list = regexprep(mask_list, ')','');
+mask_list = regexprep(mask_list, ',','');
+
+% binarize masks
+for n = 1:length(mask_list)
+    mask = mask_list{n};
+    fsl_maths = ['fslmaths jhu-tracts_prob_' mask '.nii.gz -bin jhu-tracts_prob_' mask '_bin.nii.gz'];
+    system(fsl_maths)
+end
+
+%% Extract data from NODDI sequences 
+source_seq_list = {'r_JHU_Case1_ficvf_WM','r_JHU_Case1_fiso_WM','r_JHU_Case1_odi_WM'};
+
+for n = 1:length(source_seq_list)
+    source_seq = source_seq_list{n};
+    if n ==1 
+        for m = 1:length(mask_list)
+            %generate voxel number, mean, and SD for each brain region
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k jhu-tracts_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+            %Tabulate data
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Tndi = cell2table (intensities, 'VariableNames', {'Voxels_ndi','Volumes_ndi','NDI Mean','SD_ndi'});
+
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_ndi','Volumes_ndi','NDI Mean','SD_ndi'});
+                Tndi = [Tndi;T2];
+            end
+            
+            %Extract raw intensity values per voxel for each brain region
+            fsl_meants = ['fslmeants -i ' source_seq ' -m jhu-tracts_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            if m == 1
+                raw_values_1 = importdata('out1.txt');
+            elseif m == 2 
+                raw_values_2 = importdata('out1.txt');
+            elseif m == 3 
+                raw_values_3 = importdata('out1.txt');
+            elseif m == 4 
+                raw_values_4 = importdata('out1.txt');
+            elseif m == 5 
+                raw_values_5 = importdata('out1.txt');
+            elseif m == 6 
+                raw_values_6 = importdata('out1.txt');
+            elseif m == 7 
+                raw_values_7 = importdata('out1.txt');
+            elseif m == 8 
+                raw_values_8 = importdata('out1.txt');
+            elseif m == 9 
+                raw_values_9 = importdata('out1.txt');
+            elseif m == 10 
+                raw_values_10 = importdata('out1.txt');
+            elseif m == 11 
+                raw_values_11 = importdata('out1.txt');
+            elseif m == 12 
+                raw_values_12 = importdata('out1.txt');
+            elseif m == 13 
+                raw_values_13 = importdata('out1.txt');
+            elseif m == 14 
+                raw_values_14 = importdata('out1.txt');
+            elseif m == 15 
+                raw_values_15 = importdata('out1.txt');
+            elseif m == 16 
+                raw_values_16 = importdata('out1.txt');
+            elseif m == 17 
+                raw_values_17 = importdata('out1.txt');
+            elseif m == 18 
+                raw_values_18 = importdata('out1.txt');
+            elseif m == 19 
+                raw_values_19 = importdata('out1.txt');
+            elseif m == 20 
+                raw_values_20 = importdata('out1.txt');
+            end
+        end
+
+        Trv_ndi = num2cell(padcat(raw_values_1,raw_values_2,raw_values_3,raw_values_4, ...
+                  raw_values_5,raw_values_6,raw_values_7,raw_values_8,raw_values_9,raw_values_10,raw_values_11,raw_values_12,raw_values_13,...
+                  raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20));
+        %Truncate names to max length
+        mask_list_trunc = regexp(mask_list, '^.{1,63}','match','once');
+
+        Trv_ndi = cell2table(Trv_ndi',"VariableNames", mask_list_trunc);
+    
+    end
+
+    if n == 2
+        for m = 1:length(mask_list)
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k jhu-tracts_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Tfwf = cell2table (intensities, 'VariableNames', {'Voxels_fwf','Volumes_fwf','FWF Mean','SD_fwf'});
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_fwf','Volumes_fwf','FWF Mean','SD_fwf'});
+                Tfwf = [Tfwf;T2];
+            end
+
+            fsl_meants = ['fslmeants -i ' source_seq ' -m jhu-tracts_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            if m == 1
+                raw_values_1 = importdata('out1.txt');
+            elseif m == 2 
+                raw_values_2 = importdata('out1.txt');
+            elseif m == 3 
+                raw_values_3 = importdata('out1.txt');
+            elseif m == 4 
+                raw_values_4 = importdata('out1.txt');
+            elseif m == 5 
+                raw_values_5 = importdata('out1.txt');
+            elseif m == 6 
+                raw_values_6 = importdata('out1.txt');
+            elseif m == 7 
+                raw_values_7 = importdata('out1.txt');
+            elseif m == 8 
+                raw_values_8 = importdata('out1.txt');
+            elseif m == 9 
+                raw_values_9 = importdata('out1.txt');
+            elseif m == 10 
+                raw_values_10 = importdata('out1.txt');
+            elseif m == 11 
+                raw_values_11 = importdata('out1.txt');
+            elseif m == 12 
+                raw_values_12 = importdata('out1.txt');
+            elseif m == 13 
+                raw_values_13 = importdata('out1.txt');
+            elseif m == 14 
+                raw_values_14 = importdata('out1.txt');
+            elseif m == 15 
+                raw_values_15 = importdata('out1.txt');
+            elseif m == 16 
+                raw_values_16 = importdata('out1.txt');
+            elseif m == 17 
+                raw_values_17 = importdata('out1.txt');
+            elseif m == 18 
+                raw_values_18 = importdata('out1.txt');
+            elseif m == 19 
+                raw_values_19 = importdata('out1.txt');
+            elseif m == 20 
+                raw_values_20 = importdata('out1.txt');
+            end
+        end
+
+        Trv_fwf = num2cell(padcat(raw_values_1,raw_values_2,raw_values_3,raw_values_4, ...
+                  raw_values_5,raw_values_6,raw_values_7,raw_values_8,raw_values_9,raw_values_10,raw_values_11,raw_values_12,raw_values_13,...
+                  raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20));
+        
+        %Truncate names to max length
+        mask_list_trunc = regexp(mask_list, '^.{1,63}','match','once');
+        
+        Trv_fwf = cell2table(Trv_fwf',"VariableNames", mask_list_trunc);
+    end
+
+    if n == 3
+        for m = 1:length(mask_list)
+            mask = mask_list{m};
+            fslstats = ['fslstats ' source_seq ' -k jhu-tracts_prob_' mask '_bin.nii.gz -V -M -S >data.txt'];
+            system(fslstats)
+
+            if m == 1
+                intensities = num2cell(importdata('data.txt'));
+                Todi = cell2table (intensities, 'VariableNames', {'Voxels_odi','Volumes_odi','ODI Mean','SD_odi'});
+            else 
+                intensities = num2cell(importdata('data.txt'));
+                T2 = cell2table (intensities, 'VariableNames', {'Voxels_odi','Volumes_odi','ODI Mean','SD_odi'});
+                Todi = [Todi;T2];
+            end
+
+            fsl_meants = ['fslmeants -i ' source_seq ' -m jhu-tracts_prob_' mask '_bin.nii.gz -o out.txt --showall'];
+            system(fsl_meants)
+            system('tail -1 out.txt >out1.txt')
+            if m == 1
+                raw_values_1 = importdata('out1.txt');
+            elseif m == 2 
+                raw_values_2 = importdata('out1.txt');
+            elseif m == 3 
+                raw_values_3 = importdata('out1.txt');
+            elseif m == 4 
+                raw_values_4 = importdata('out1.txt');
+            elseif m == 5 
+                raw_values_5 = importdata('out1.txt');
+            elseif m == 6 
+                raw_values_6 = importdata('out1.txt');
+            elseif m == 7 
+                raw_values_7 = importdata('out1.txt');
+            elseif m == 8 
+                raw_values_8 = importdata('out1.txt');
+            elseif m == 9 
+                raw_values_9 = importdata('out1.txt');
+            elseif m == 10 
+                raw_values_10 = importdata('out1.txt');
+            elseif m == 11 
+                raw_values_11 = importdata('out1.txt');
+            elseif m == 12 
+                raw_values_12 = importdata('out1.txt');
+            elseif m == 13 
+                raw_values_13 = importdata('out1.txt');
+            elseif m == 14 
+                raw_values_14 = importdata('out1.txt');
+            elseif m == 15 
+                raw_values_15 = importdata('out1.txt');
+            elseif m == 16 
+                raw_values_16 = importdata('out1.txt');
+            elseif m == 17 
+                raw_values_17 = importdata('out1.txt');
+            elseif m == 18 
+                raw_values_18 = importdata('out1.txt');
+            elseif m == 19 
+                raw_values_19 = importdata('out1.txt');
+            elseif m == 20 
+                raw_values_20 = importdata('out1.txt');
+            end
+        end
+
+        Trv_odi = num2cell(padcat(raw_values_1,raw_values_2,raw_values_3,raw_values_4, ...
+                  raw_values_5,raw_values_6,raw_values_7,raw_values_8,raw_values_9,raw_values_10,raw_values_11,raw_values_12,raw_values_13,...
+                  raw_values_14,raw_values_15,raw_values_16,raw_values_17,raw_values_18,raw_values_19,raw_values_20));
+        
+        %Truncate names to max length
+        mask_list_trunc = regexp(mask_list, '^.{1,63}','match','once');
+       
+        Trv_odi = cell2table(Trv_odi',"VariableNames",mask_list_trunc);
+    end
+end
+
+mask_list_key = mask_list';
+
+key = cell2table(mask_list_key, 'VariableNames',{'Region'});
+
+Tndi = [key, Tndi];
+Todi = [key, Todi];
+Tfwf = [key, Tfwf];
+
+Tjoin = join(Tndi, Todi);
+T_combined = join(Tjoin, Tfwf);
+%%
+writetable(T_combined, 'JHU_tract_NODDI_indices.csv')
+%%
+writetable(Trv_ndi, 'JHU_tract_NDI_raw_intensities.csv')
+writetable(Trv_fwf, 'JHU_tract_FWF_raw_intensities.csv')
+writetable(Trv_odi, 'JHU_tract_ODI_raw_intensities.csv')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
