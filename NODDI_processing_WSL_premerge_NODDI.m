@@ -419,7 +419,6 @@ V = niftiread([anat_seq '.nii.gz']);
 mask = niftiread('anat_seq_brain_mask.nii.gz');
 tool = imtool3D(V);
 tool.setMask(mask); 
-%%
 
 %% extract atlases 
 % cd('/usr/local/fsl/data/standard')
@@ -431,36 +430,58 @@ tool.setMask(mask);
 % coregister T1 MPRAGE to NODDI
 source_seq = ['anat_seq_brain_mask.nii'];
 ref_seq = ['Case1_ficvf.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol_T1_NODDI.mat -v' ];
 system(flirt_coreg)
 
 % coregister NODDI-registered T1 MPRAGE to atlas
 source_seq = ['r_noddi_anat_seq_brain_mask.nii'];
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -omat invol2refvol.mat -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -omat invol2refvol_T1_NODDI_MNI.mat -v' ];
 system(flirt_coreg)
 
 % apply transformation matrix to NODDI 
 source_seq = ['Case1_ficvf.nii'];
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 source_seq = ['Case1_fiso.nii'];
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 source_seq = ['Case1_odi.nii'];
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 %% Create atlas masks on FSL %%
 
 %% Binarize masks
-mask_list = {'Caudate','Cerebellum','Frontal_Lobe','Insula','Occipital_Lobe','Parietal_Lobe',...
-    'Putamen','Temporal_Lobe','Thalamus'};
+mask_list = {'Caudate','Cerebellum','Frontal Lobe','Insula','Occipital Lobe','Parietal Lobe',...
+    'Putamen','Temporal Lobe','Thalamus'};
+
+for n = 1:length(mask_list)
+    mask = mask_list{n};
+    instring = ['mni_prob_' mask '.nii.gz'];
+    outstring = regexprep(instring, ' ', '_');
+    outstring = regexprep(outstring, '(','');
+    outstring = regexprep(outstring, ')','');
+    outstring = regexprep(outstring, ',','');
+
+    if isfile(instring) == 0
+        continue
+    elseif instring == outstring
+        continue
+    else
+        movefile(instring, outstring)
+    end
+end
+
+mask_list = regexprep(mask_list, ' ', '_');
+mask_list = regexprep(mask_list, '(','');
+mask_list = regexprep(mask_list, ')','');
+mask_list = regexprep(mask_list, ',','');
 
 for n = 1:length(mask_list)
     mask = mask_list{n};
@@ -469,7 +490,7 @@ for n = 1:length(mask_list)
 end
 
 %% Extract data from NODDI sequences fiso = FWF, ficvf = NDI
-source_seq_list = {'r_Case1_ficvf','r_Case1_fiso','r_Case1_odi'};
+source_seq_list = {'r_MNI_Case1_ficvf','r_MNI_Case1_fiso','r_MNI_Case1_odi'};
 
 for n = 1:length(source_seq_list)
     source_seq = source_seq_list{n};
@@ -608,8 +629,7 @@ for n = 1:length(source_seq_list)
     end
 end
 
-mask_list_key = {'Caudate';'Cerebellum';'Frontal_Lobe';'Insula';'Occipital_Lobe';'Parietal_Lobe';...
-    'Putamen';'Temporal_Lobe';'Thalamus'};
+mask_list_key = mask_list';
 
 key = cell2table(mask_list_key, 'VariableNames',{'Region'});
 
@@ -633,53 +653,47 @@ source_seq = ['anat_seq_brain_mask.nii.gz'];
 fast_seg = ['fast -B -S 1 -n 3 -t 1 -v ' source_seq];
 system(fast_seg)
 
-
 %% Harvard Oxford Analysis %%
 
 %% Cortical/Grey Matter Analysis
 
-% coregister GM mask to NODDI
+% Binarize and apply transformation matrix from MNI transformations to GM mask
 source_seq = ['anat_seq_brain_mask_pve_1'];
+fsl_maths = ['fslmaths ' source_seq ' -bin ' source_seq '_bin.nii.gz'];
+system(fsl_maths)
+
+source_seq = ['anat_seq_brain_mask_pve_1_bin'];
 ref_seq = ['Case1_ficvf'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
+
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol_T1_NODDI.mat -v' ];
 system(flirt_coreg)
 
-% Extract GM from NODDI using GM mask
-GM_mask = ['r_noddi_anat_seq_brain_mask_pve_1'];
-fsl_maths = ['fslmaths ' GM_mask ' -bin ' GM_mask '_bin.nii.gz'];
+source_seq = ['r_noddi_anat_seq_brain_mask_pve_1_bin'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
 
-ref_seq = ['Case1_ficvf'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol_T1_NODDI_MNI.mat -v' ];
+system(flirt_coreg)
+
+
+%% Rebinarize mask and manually adjust threshold (higher is more stringent)
+GM_mask = ['r_MNI_r_noddi_anat_seq_brain_mask_pve_1_bin'];
+fsl_maths = ['fslmaths ' GM_mask ' -thr 0.55 -bin ' GM_mask '_bin.nii.gz'];
+system(fsl_maths)
+
+%% Extract GM from NODDI using GM mask
+GM_mask = ['r_MNI_r_noddi_anat_seq_brain_mask_pve_1_bin_bin'];
+ref_seq = ['r_MNI_Case1_ficvf'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
 system(fslmaths)
 
-ref_seq = ['Case1_fiso'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+ref_seq = ['r_MNI_Case1_fiso'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
 system(fslmaths)
 
-ref_seq = ['Case1_odi'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+ref_seq = ['r_MNI_Case1_odi'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
 system(fslmaths)
 
-% coregister NODDI-registered GM mask to Cortical atlas
-source_seq = ['r_noddi_anat_seq_brain_mask_pve_1.nii'];
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/HarvardOxford-cort-maxprob-thr0-1mm'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
-system(flirt_coreg)
-
-% apply transformation matrix to NODDI 
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/HarvardOxford-cort-maxprob-thr0-1mm'];
-
-source_seq = ['Case1_ficvf_GM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-source_seq = ['Case1_fiso_GM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-source_seq = ['Case1_odi_GM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
 
 %%
 
@@ -731,7 +745,7 @@ for n = 1:length(mask_list)
 end
 
 %% Extract data from NODDI sequences 
-source_seq_list = {'r_Case1_ficvf_GM','r_Case1_fiso_GM','r_Case1_odi_GM'};
+source_seq_list = {'r_MNI_Case1_ficvf_GM','r_MNI_Case1_fiso_GM','r_MNI_Case1_odi_GM'};
 
 for n = 1:length(source_seq_list)
     source_seq = source_seq_list{n};
@@ -1484,34 +1498,40 @@ writetable(Trv_fwf, 'HO_subcort_FWF_raw_intensities.csv')
 writetable(Trv_odi, 'HO_subcort_ODI_raw_intensities.csv')
 
 
-%% John Hopkins Analysis %%
+%% John Hopkins Analysis (DTI based atlases) %%
 
-%% Cortical/Grey Matter Analysis
+%% WM Labels Analysis
 
-% coregister GM mask to NODDI
-source_seq = ['anat_seq_brain_mask_pve_1'];
+% coregister T1 to NODDI
+source_seq = ['anat_seq_brain_mask'];
 ref_seq = ['Case1_ficvf'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
 system(flirt_coreg)
 
+% apply matrix to GM mask 
+source_seq = ['anat_seq_brain_mask_pve_1'];
+ref_seq = ['Case1_ficvf'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
 % Extract GM from NODDI using GM mask
 GM_mask = ['r_noddi_anat_seq_brain_mask_pve_1'];
-fsl_maths = ['fslmaths ' GM_mask ' -bin ' GM_mask '_bin.nii.gz'];
-
 ref_seq = ['Case1_ficvf'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
 system(fslmaths)
 
+GM_mask = ['r_noddi_anat_seq_brain_mask_pve_1'];
 ref_seq = ['Case1_fiso'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
 system(fslmaths)
 
+GM_mask = ['r_noddi_anat_seq_brain_mask_pve_1'];
 ref_seq = ['Case1_odi'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask '_bin ' ref_seq '_GM'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' GM_mask ' ' ref_seq '_GM'];
 system(fslmaths)
 
-% coregister NODDI-registered GM mask to Cortical atlas
-source_seq = ['r_noddi_anat_seq_brain_mask_pve_1.nii'];
+% coregister NODDI-registered T1 to Subcortical atlas
+source_seq = ['r_noddi_anat_seq_brain_mask.nii'];
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
 system(flirt_coreg)
@@ -1529,6 +1549,111 @@ system(flirt_coreg)
 
 source_seq = ['Case1_odi_GM'];
 flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+
+%%
+
+% coregister T1 MPRAGE to NODDI
+source_seq = ['anat_seq_brain_mask'];
+ref_seq = ['Case1_odi'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
+system(flirt_coreg)
+
+% apply transformation matrix to WM mask
+source_seq = ['anat_seq_brain_mask_pve_2'];
+ref_seq = ['Case1_odi'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+% Extract WM from NODDI using WM mask
+WM_mask = ['r_noddi_anat_seq_brain_mask_pve_2'];
+fsl_maths = ['fslmaths ' WM_mask ' -bin ' WM_mask '_bin.nii.gz'];
+
+ref_seq = ['Case1_ficvf'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
+
+ref_seq = ['Case1_fiso'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
+
+ref_seq = ['Case1_odi'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
+
+% coregister DTI tensor to Cortical atlas
+source_seq = ['dti_tensor'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
+system(flirt_coreg)
+
+% apply transformation matrix to NODDI 
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
+
+source_seq = ['Case1_ficvf_WM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+source_seq = ['Case1_fiso_WM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+source_seq = ['Case1_odi_WM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+
+%%
+
+% coregister T1 MPRAGE to NODDI
+source_seq = ['anat_seq_brain_mask'];
+ref_seq = ['Case1_odi'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
+system(flirt_coreg)
+
+% apply transformation matrix to WM mask
+source_seq = ['anat_seq_brain_mask_pve_2'];
+ref_seq = ['Case1_odi'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+
+% Extract WM from NODDI using WM mask
+WM_mask = ['r_noddi_anat_seq_brain_mask_pve_2'];
+fsl_maths = ['fslmaths ' WM_mask ' -bin ' WM_mask '_bin.nii.gz'];
+
+ref_seq = ['Case1_ficvf'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
+
+ref_seq = ['Case1_fiso'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
+
+ref_seq = ['Case1_odi'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
+
+% coregister NODDI-registered WM mask to JHU atlas
+source_seq = ['r_noddi_anat_seq_brain_mask_pve_2'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
+system(flirt_coreg)
+
+% apply transformation matrix to NODDI 
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
+
+source_seq = ['Case1_ficvf_WM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+source_seq = ['Case1_fiso_WM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+system(flirt_coreg)
+
+source_seq = ['Case1_odi_WM'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 %%
