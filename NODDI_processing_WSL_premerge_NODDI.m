@@ -665,13 +665,13 @@ system(fsl_maths)
 source_seq = ['anat_seq_brain_mask_pve_1_bin'];
 ref_seq = ['Case1_ficvf'];
 
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol_T1_NODDI.mat -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol_T1_NODDI.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 source_seq = ['r_noddi_anat_seq_brain_mask_pve_1_bin'];
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
 
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol_T1_NODDI_MNI.mat -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol_T1_NODDI_MNI.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 
@@ -1170,13 +1170,13 @@ system(fsl_maths)
 source_seq = ['anat_seq_brain_mask_pve_2_bin'];
 ref_seq = ['Case1_ficvf'];
 
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol_T1_NODDI.mat -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol_T1_NODDI.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 source_seq = ['r_noddi_anat_seq_brain_mask_pve_2_bin'];
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/MNI-maxprob-thr0-1mm.nii'];
 
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol_T1_NODDI_MNI.mat -v' ];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_seq ' -init invol2refvol_T1_NODDI_MNI.mat -applyxfm -v' ];
 system(flirt_coreg)
 
 
@@ -1570,82 +1570,67 @@ ref_seq = ['Case1_odi'];
 fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
 system(fslmaths)
 
-% coregister DTI tensor to Cortical atlas
-source_seq = ['dti_tensor'];
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
-system(flirt_coreg)
-
-% apply transformation matrix to NODDI 
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
-
-source_seq = ['Case1_ficvf_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-source_seq = ['Case1_fiso_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-source_seq = ['Case1_odi_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
-system(flirt_coreg)
-
-
 %%
+% coregister DTI tensor to JHU atlas
+source_seq = ['dti_tensor'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-DWI-1mm'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -omat invol2refvol_DTI_JHU.mat -v' ];
+system(flirt_coreg)
 
-% coregister T1 MPRAGE to NODDI
+% coregister T1 MPRAGE to DTI tensor
 source_seq = ['anat_seq_brain_mask'];
-ref_seq = ['Case1_odi'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -omat invol2refvol.mat -v' ];
+ref_seq = ['dti_tensor'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_dti_' source_seq ' -omat invol2refvol_T1_DTI.mat -v' ];
 system(flirt_coreg)
 
 % apply transformation matrix to WM mask
 source_seq = ['anat_seq_brain_mask_pve_2'];
-ref_seq = ['Case1_odi'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_noddi_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+ref_seq = ['dti_tensor'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_dti_' source_seq ' -init invol2refvol_T1_DTI.mat -applyxfm -v' ];
 system(flirt_coreg)
 
-
-% Extract WM from NODDI using WM mask
-WM_mask = ['r_noddi_anat_seq_brain_mask_pve_2'];
-fsl_maths = ['fslmaths ' WM_mask ' -bin ' WM_mask '_bin.nii.gz'];
-
-ref_seq = ['Case1_ficvf'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
-system(fslmaths)
-
-ref_seq = ['Case1_fiso'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
-system(fslmaths)
-
-ref_seq = ['Case1_odi'];
-fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
-system(fslmaths)
-
-% coregister NODDI-registered WM mask to JHU atlas
-source_seq = ['r_noddi_anat_seq_brain_mask_pve_2'];
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_cort_' source_seq ' -omat invol2refvol.mat -v' ];
+source_seq = ['r_dti_anat_seq_brain_mask_pve_2'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-DWI-1mm'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -init invol2refvol_DTI_JHU.mat -applyxfm -v' ];
 system(flirt_coreg)
-
+%%
 % apply transformation matrix to NODDI 
-ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-labels-1mm'];
+ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-DWI-1mm'];
 
-source_seq = ['Case1_ficvf_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+source_seq = ['Case1_ficvf'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -init invol2refvol_DTI_JHU.mat -applyxfm -v' ];
 system(flirt_coreg)
 
-source_seq = ['Case1_fiso_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+source_seq = ['Case1_fiso'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -init invol2refvol_DTI_JHU.mat -applyxfm -v' ];
 system(flirt_coreg)
 
-source_seq = ['Case1_odi_WM'];
-flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHUlabel_' source_seq ' -init invol2refvol.mat -applyxfm -v' ];
+source_seq = ['Case1_odi'];
+flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_JHU_' source_seq ' -init invol2refvol_DTI_JHU.mat -applyxfm -v' ];
 system(flirt_coreg)
+%%
+% Extract WM from NODDI using WM mask
+WM_mask = ['r_JHU_r_dti_anat_seq_brain_mask_pve_2'];
+fslmaths = ['fslmaths ' WM_mask ' -thr 0.4 -bin ' WM_mask '_bin.nii.gz'];
+system(fslmaths)
+%%
+ref_seq = ['r_JHU_Case1_ficvf'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
+
+ref_seq = ['r_JHU_Case1_fiso'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
+
+ref_seq = ['r_JHU_Case1_odi'];
+fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask '_bin ' ref_seq '_WM'];
+system(fslmaths)
 
 %%
-
+% rotate/translate image to fine tune coregistration using 3D slicer
+V = niftiread('r_JHU_Case1_ficvf_WM');
+V = imrotate(V, 359.98);
+niftiwrite(V, 'r_JHU_Case1_ficvf_WM_rot')
 %% Create atlas masks on FSL %%
 
 %% Binarize masks
