@@ -1,0 +1,305 @@
+---
+title: "NODDI analysis"
+author: "Alex Wong"
+date: "`r Sys.Date()`"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+```{r knitr_init, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="999999")
+opts_knit$set(width=75)
+```
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE, error=FALSE, results="hide"}
+library(MASS)
+library(Hmisc)
+library(brant)
+library(generalhoslem)
+library(DescTools)
+library(aod)
+library(pROC)
+library(irr)
+library(stringr)
+library(blandr)
+library(ggplot2)
+library(cowplot)
+library(dplyr)
+library(ggpubr)
+library(ggeasy)
+```
+
+# Loading files for analysis
+
+```{r}
+setwd("C:/WSL2_dir/NODDISAH_11/NODDI_processing")
+
+mni_NDI_data = read.csv('MNI_NDI_raw_intensities.csv')
+mni_FWF_data = read.csv('MNI_FWF_raw_intensities.csv')
+mni_ODI_data = read.csv('MNI_ODI_raw_intensities.csv')
+
+HO_cort_NDI_data = read.csv('HO_cort_NDI_raw_intensities.csv')
+HO_cort_FWF_data = read.csv('HO_cort_FWF_raw_intensities.csv')
+HO_cort_ODI_data = read.csv('HO_cort_ODI_raw_intensities.csv')
+
+HO_subcort_NDI_data = read.csv('HO_subcort_NDI_raw_intensities.csv')
+HO_subcort_FWF_data = read.csv('HO_subcort_FWF_raw_intensities.csv')
+HO_subcort_ODI_data = read.csv('HO_subcort_ODI_raw_intensities.csv')
+
+JHU_label_NDI_data = read.csv('JHU_label_NDI_raw_intensities.csv')
+JHU_label_FWF_data = read.csv('JHU_label_FWF_raw_intensities.csv')
+JHU_label_ODI_data = read.csv('JHU_label_ODI_raw_intensities.csv')
+
+JHU_tract_NDI_data = read.csv('JHU_tract_NDI_raw_intensities.csv')
+JHU_tract_FWF_data = read.csv('JHU_tract_FWF_raw_intensities.csv')
+JHU_tract_ODI_data = read.csv('JHU_tract_ODI_raw_intensities.csv')
+
+```
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE, error=FALSE, results="hide"}
+
+#load data
+
+mni_NDI_data <- mutate_all(mni_NDI_data, function(x) as.numeric(as.character(x)))
+mni_FWF_data <- mutate_all(mni_FWF_data, function(x) as.numeric(as.character(x)))
+mni_ODI_data <- mutate_all(mni_ODI_data, function(x) as.numeric(as.character(x)))
+
+HO_cort_NDI_data <- mutate_all(HO_cort_NDI_data, function(x) as.numeric(as.character(x)))
+HO_cort_FWF_data <- mutate_all(HO_cort_FWF_data, function(x) as.numeric(as.character(x)))
+HO_cort_ODI_data <- mutate_all(HO_cort_ODI_data, function(x) as.numeric(as.character(x)))
+
+HO_subcort_NDI_data <- mutate_all(HO_subcort_NDI_data, function(x) as.numeric(as.character(x)))
+HO_subcort_FWF_data <- mutate_all(HO_subcort_FWF_data, function(x) as.numeric(as.character(x)))
+HO_subcort_ODI_data <- mutate_all(HO_subcort_ODI_data, function(x) as.numeric(as.character(x)))
+
+JHU_label_NDI_data <- mutate_all(JHU_label_NDI_data, function(x) as.numeric(as.character(x)))
+JHU_label_FWF_data <- mutate_all(JHU_label_FWF_data, function(x) as.numeric(as.character(x)))
+JHU_label_ODI_data <- mutate_all(JHU_label_ODI_data, function(x) as.numeric(as.character(x)))
+
+JHU_tract_NDI_data <- mutate_all(JHU_tract_NDI_data, function(x) as.numeric(as.character(x)))
+JHU_tract_FWF_data <- mutate_all(JHU_tract_FWF_data, function(x) as.numeric(as.character(x)))
+JHU_tract_ODI_data <- mutate_all(JHU_tract_ODI_data, function(x) as.numeric(as.character(x)))
+
+
+mni_NDI_data[mni_NDI_data == 0] <- NA
+mni_NDI_data <- mni_NDI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+mni_FWF_data[mni_FWF_data == 0] <- NA
+mni_FWF_data <- mni_FWF_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+mni_ODI_data[mni_ODI_data == 0] <- NA
+mni_ODI_data <- mni_ODI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+
+HO_cort_NDI_data[HO_cort_NDI_data == 0] <- NA
+HO_cort_NDI_data <- HO_cort_NDI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+HO_cort_FWF_data[HO_cort_FWF_data == 0] <- NA
+HO_cort_FWF_data <- HO_cort_FWF_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+HO_cort_ODI_data[HO_cort_ODI_data == 0] <- NA
+HO_cort_ODI_data <- HO_cort_ODI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+
+HO_subcort_NDI_data[HO_subcort_NDI_data == 0] <- NA
+HO_subcort_NDI_data <- HO_subcort_NDI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+HO_subcort_FWF_data[HO_subcort_FWF_data == 0] <- NA
+HO_subcort_FWF_data <- HO_subcort_FWF_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+HO_subcort_ODI_data[HO_subcort_ODI_data == 0] <- NA
+HO_subcort_ODI_data <- HO_subcort_ODI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+
+JHU_label_NDI_data[JHU_label_NDI_data == 0] <- NA
+JHU_label_NDI_data <- JHU_label_NDI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+JHU_label_FWF_data[JHU_label_FWF_data == 0] <- NA
+JHU_label_FWF_data <- JHU_label_FWF_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+JHU_label_ODI_data[JHU_label_ODI_data == 0] <- NA
+JHU_label_ODI_data <- JHU_label_ODI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+
+JHU_tract_NDI_data[JHU_tract_NDI_data == 0] <- NA
+JHU_tract_NDI_data <- JHU_tract_NDI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+JHU_tract_FWF_data[JHU_tract_FWF_data == 0] <- NA
+JHU_tract_FWF_data <- JHU_tract_FWF_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+JHU_tract_ODI_data[JHU_tract_ODI_data == 0] <- NA
+JHU_tract_ODI_data <- JHU_tract_ODI_data %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+```
+
+# Create plots
+
+## MNI
+
+#### NDI
+```{r echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE, error=FALSE, results="hide"}
+
+col_list = c("Caudate","Cerebellum","Frontal_Lobe","Insula","Occipital_Lobe","Parietal_Lobe","Temporal_Lobe","Thalamus")
+
+#create plots
+#NDI
+Caudate = gghistogram(mni_NDI_data$Caudate,
+                    main = "Caudate",
+                    xlab = "Intensity"
+                   ) + ggeasy::easy_center_title()
+ 
+Cerebellum = gghistogram(mni_NDI_data$Cerebellum,
+                       main = "Cerebellum",
+                       xlab = "Intensity"
+                      ) + ggeasy::easy_center_title()
+
+Frontal_Lobe = gghistogram(mni_NDI_data$Frontal_Lobe,
+                         main = "Frontal_Lobe",
+                         xlab = "Intensity"
+                        ) + ggeasy::easy_center_title()
+
+Insula = gghistogram(mni_NDI_data$Insula,
+                   main = "Insula",
+                   xlab = "Intensity"
+                  ) + ggeasy::easy_center_title()
+
+Occipital_Lobe = gghistogram(mni_NDI_data$Occipital_Lobe,
+                           main = "Occipital_Lobe",
+                           xlab = "Intensity"
+                          ) + ggeasy::easy_center_title()
+
+Parietal_Lobe = gghistogram(mni_NDI_data$Parietal_Lobe,
+                          main = "Parietal_Lobe",
+                          xlab = "Intensity"
+                         ) + ggeasy::easy_center_title()
+
+Temporal_Lobe = gghistogram(mni_NDI_data$Temporal_Lobe,
+                          main = "Temporal_Lobe",
+                          xlab = "Intensity"
+                         ) + ggeasy::easy_center_title()
+
+Thalamus = gghistogram(mni_NDI_data$Thalamus,
+                     main = "Thalamus",
+                     xlab = "Intensity"
+                    ) + ggeasy::easy_center_title()
+```
+
+```{r}
+plot_grid(Caudate, Cerebellum, Frontal_Lobe, Insula, Occipital_Lobe, Parietal_Lobe, Temporal_Lobe, Thalamus, 
+          labels = c("MNI_NDI"),
+          ncol = 4, nrow = 2)
+
+```
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE, error=FALSE, results="hide"}
+#FWF
+Caudate = gghistogram(mni_FWF_data$Caudate,
+                    main = "caudate",
+                    xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Cerebellum = gghistogram(mni_FWF_data$Cerebellum,
+                       main = "Cerebellum",
+                       xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Frontal_Lobe = gghistogram(mni_FWF_data$Frontal_Lobe,
+                         main = "Frontal_Lobe",
+                         xlab = "Intensit y"
+) + ggeasy::easy_center_title()
+
+Insula = gghistogram(mni_FWF_data$Insula,
+                   main = "Insula",
+                   xlab = "Intensity",
+                   xlim = c(0,0.5)
+) + ggeasy::easy_center_title()
+
+Occipital_Lobe = gghistogram(mni_FWF_data$Occipital_Lobe,
+                           main = "Occipital_Lobe",
+                           xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Parietal_Lobe = gghistogram(mni_FWF_data$Parietal_Lobe,
+                          main = "Parietal_Lobe",
+                          xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Temporal_Lobe = gghistogram(mni_FWF_data$Temporal_Lobe,
+                          main = "Temporal_Lobe",
+                          xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Thalamus = gghistogram(mni_FWF_data$Thalamus,
+                     main = "Thalamus",
+                     xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+```
+
+#### FWF
+```{r}
+plot_grid(Caudate, Cerebellum, Frontal_Lobe, Insula, Occipital_Lobe, Parietal_Lobe, Temporal_Lobe, Thalamus, 
+          labels = c("MNI_FWF"),
+          ncol = 4, nrow = 2)
+```
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE, error=FALSE, results="hide"}
+#ODI
+Caudate = gghistogram(mni_ODI_data$Caudate,
+                    main = "caudate",
+                    xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Cerebellum = gghistogram(mni_ODI_data$Cerebellum,
+                       main = "Cerebellum",
+                       xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Frontal_Lobe = gghistogram(mni_ODI_data$Frontal_Lobe,
+                         main = "Frontal_Lobe",
+                         xlab = "Intensit y"
+) + ggeasy::easy_center_title()
+
+Insula = gghistogram(mni_ODI_data$Insula,
+                   main = "Insula",
+                   xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Occipital_Lobe = gghistogram(mni_ODI_data$Occipital_Lobe,
+                           main = "Occipital_Lobe",
+                           xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Parietal_Lobe = gghistogram(mni_ODI_data$Parietal_Lobe,
+                          main = "Parietal_Lobe",
+                          xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Temporal_Lobe = gghistogram(mni_ODI_data$Temporal_Lobe,
+                          main = "Temporal_Lobe",
+                          xlab = "Intensity"
+) + ggeasy::easy_center_title()
+
+Thalamus = gghistogram(mni_ODI_data$Thalamus,
+                     main = "Thalamus",
+                     xlab = "Intensity",
+                     xlim = c(0,0.8)
+) + ggeasy::easy_center_title()
+
+
+
+
+```
+
+```{r}
+plot_grid(Caudate, Cerebellum, Frontal_Lobe, Insula, Occipital_Lobe, Parietal_Lobe, Temporal_Lobe, Thalamus, 
+          labels = c("MNI_ODI"),
+          ncol = 4, nrow = 2)
+
+```
