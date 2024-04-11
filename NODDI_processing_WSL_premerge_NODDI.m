@@ -15,18 +15,18 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_11/NODDI_processing';
+dataset_directory = '/mnt/c/WSL2_dir/AVM cases/3-IS/DICOM';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240109112943_801',...
-    'DICOM_AX_DTI_NODDI_2_20240109112943_901',...
-    'DICOM_AX_DTI_NODDI_3_20240109112943_1001',...
-    'DICOM_AX_DTI_NODDI_4_20240109112943_1101'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230910101712_1101',...
+    'DICOM_AX_DTI_NODDI_2_20230910101712_1201',...
+    'DICOM_AX_DTI_NODDI_3_20230910101712_1301',...
+    'DICOM_AX_DTI_NODDI_4_20230910101712_1401'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20240109112943_701';
-t2 = 'DICOM_AX_T2W_CSENSE_20240109112943_601';
-anat_seq = 'DICOM_Sag_MP-Rage_20240109112943_201';
+calibration = 'DICOM_AX_DTI_CALIBRATION_20230910101712_1001';
+t2 = 'DICOM_AX_T2W_CSENSE_20230910101712_601';
+anat_seq = 'DICOM_SAG_MP-RAGE_20230910101712_901';
 
 %% rename bvec and bval files
 
@@ -45,7 +45,7 @@ for noddi_files = 1:length(NODDI_nii_list)
 
 end
 
-%% extract b0 images and merge with calibration
+% extract b0 images and merge with calibration
 i = 1;
 for noddi_files = 1:length(NODDI_nii_list)
     noddi_file = NODDI_nii_list{noddi_files};
@@ -68,12 +68,13 @@ for noddi_files = 1:length(NODDI_nii_list)
     i = i+1;
 end
 
-%% fsl merge b0 scans
+% fsl merge b0 scans
 fslmerge = ['fslmerge -t b0 ' output_1 ' ' output_2 ' ' output_3 ' ' output_4 ' ' calibration ];
 
 system(fslmerge)
 
 %% generate acqparams.txt
+%% (if already available in metadata)
 i = 1;
 for noddi_files = 1:length(NODDI_nii_list)
     noddi_file = NODDI_nii_list{noddi_files};
@@ -94,7 +95,9 @@ i = i + 1;
 end 
 
 filename = [calibration '.json'];
+
 metadata = jsondecode(fileread(filename));
+
 total_readout_time_cal = getfield(metadata,"EstimatedTotalReadoutTime");
 
 acqparams = fopen('acqparams.txt', 'wt');
@@ -104,12 +107,19 @@ txt = ['0 ' '1 ' '0 ' num2str(total_readout_time_1) '\n' '0 ' '1 ' '0 ' num2str(
 fprintf(acqparams, txt);
 fclose(acqparams);
 
+%% if need to calculate manually %% (if doesn't work just use 0.03133
+bandwidth = getfield(metadata,"PixelBandwidth");
+MatrixSizePhase = getfield(metadata,"AcquisitionMatrixPE");
+num_echo = getfield(metadata,"PhaseEncodingSteps");
+total_readout_time_cal = (1/(bandwidth*MatrixSizePhase))*(num_echo-1);
+%% manually create acqparam.txt file
+
 %% top up
 topup = ['topup ' '--imain=b0.nii --datain=acqparams.txt --out=my_output --fout=my_field --iout=my_unwarped_images --verbose --nthr=4'];
 system(topup)
 
-%% bet 
-%% (adjust f and g, higher f (0-1) value is more stringent, higher g (-1-1) means more stringent at top, more liberal at bottom)
+% bet 
+% (adjust f and g, higher f (0-1) value is more stringent, higher g (-1-1) means more stringent at top, more liberal at bottom)
 
 bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -v'];
 %bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-f 0.7'];
@@ -125,7 +135,7 @@ tool.setMask(mask);
 fslmerge = ['fslmerge -t data ' NODDI_nii_list{1} ' ' NODDI_nii_list{2} ' ' NODDI_nii_list{3} ' ' NODDI_nii_list{4}];
 system(fslmerge)
 
-%% merge bvec and bval files
+% merge bvec and bval files
 i = 1;
 for noddi_files = 1:length(NODDI_nii_list)
     noddi_file = NODDI_nii_list{noddi_files};
@@ -149,14 +159,14 @@ end
 fclose(bvec_file);
 fclose(bval_file);
 
-%% Manual step %%
+% Manual step %%
 % When combining all 4 NODDI sequences before running eddy 
 % - combined bval file should have no new lines (all values in one line)
 % - bvec file should have 4x of each vector (ie. each line should have 4 repetitions of vectors for x, then y, 
 % then z dimension), so only 3 lines of values total in the file
 % If any of these are not followed, will run into error
 
-%% generate index.txt
+% generate index.txt
 nii = niftiread("data.nii.gz");
 header = whos ("nii");
 full_dimension = getfield(header, "size");
@@ -191,21 +201,21 @@ system(eddy)
 orig_rotated_bvec = strcat('data_eddy_unwarped', '.eddy_rotated_bvecs');
 rename_rotated_bvec = strcat('data_eddy_unwarped', '_eddy_rotated_bvecs.txt');
 rename = ['mv ', orig_rotated_bvec, ' ', rename_rotated_bvec];
-%%
+%
 system(rename)
-%%
+%
 shortened_base_file_name = erase('data_eddy_unwarped','_eddy_unwarped');
 bval_filename = strcat(shortened_base_file_name,'_bval.txt');
 bvec_filename = strcat(shortened_base_file_name,'_eddy_unwarped_eddy_rotated_bvecs.txt');
 
-%% DTI Fit
+% DTI Fit
 dtifit = ['dtifit --data=data_eddy_unwarped.nii' ' --mask=' brain_mask ' --out=dti'...
     ' --bvecs=' bvec_filename ...
     ' --bvals=' bval_filename ' --save_tensor --sse --verbose'];
 system(dtifit)
 tensors = 'dti_tensor';
 
-%% split dti_tensor to individual components
+% split dti_tensor to individual components
 input = tensors;
 tensor_dir = {'Dxx','Dxy','Dxz','Dyy','Dyz','Dzz'};
 
@@ -215,16 +225,16 @@ for i = 1:length(tensor_dir)
     system(fslroi)
 end
 
-%% coregister to atlas JHU FA atlas
+% coregister to atlas JHU FA atlas
 
-%% Coreg FA map
+% Coreg FA map
 fa_map = 'dti_FA';
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm.nii'];
 
 flirt_coreg = ['flirt -in ' fa_map ' -ref ' ref_seq ' -out r' fa_map ' -omat invol2refvol.mat -v'];
 system(flirt_coreg)
 
-%% Coreg diffusivity maps based on FA registration matrix
+% Coreg diffusivity maps based on FA registration matrix
 for i = 1:length(tensor_dir)
     source_seq = ['dti_tensor_' tensor_dir{i}];
 
@@ -232,7 +242,7 @@ for i = 1:length(tensor_dir)
     system(flirt_coreg)
 end
 
-%% Create 5mm spherical ROI and extract values (SLF=association, SCR=projection)
+% Create 5mm spherical ROI and extract values (SLF=association, SCR=projection)
 
 % Single voxel ROI
 roi_L_SLF = '128 1 110 1 99 1 0 1';
