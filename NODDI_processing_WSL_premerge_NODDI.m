@@ -15,18 +15,18 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/AVM cases/3-IS/DICOM';
+dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_02/DICOM/NODDI_processing';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230910101712_1101',...
-    'DICOM_AX_DTI_NODDI_2_20230910101712_1201',...
-    'DICOM_AX_DTI_NODDI_3_20230910101712_1301',...
-    'DICOM_AX_DTI_NODDI_4_20230910101712_1401'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230801120712_901',...
+    'DICOM_AX_DTI_NODDI_2_20230801120712_1001',...
+    'DICOM_AX_DTI_NODDI_3_20230801120712_1101',...
+    'DICOM_AX_DTI_NODDI_4_20230801120712_1201'};
 
-calibration = 'DICOM_AX_DTI_CALIBRATION_20230910101712_1001';
-t2 = 'DICOM_AX_T2W_CSENSE_20230910101712_601';
-anat_seq = 'DICOM_SAG_MP-RAGE_20230910101712_901';
+calibration = 'DICOM_AX_DTI_Calibration_20230801120712_801';
+t2 = 'DICOM_AX_T2W_CSENSE_20230801120712_601';
+anat_seq = 'DICOM_Sag_MP-Rage_20230801120712_1301';
 
 %% rename bvec and bval files
 
@@ -192,6 +192,10 @@ eddy = ['eddy_cuda10.2 ' '--imain=data' ' --mask=' brain_mask ' --index=index.tx
         ' --bvals=data_bval.txt' ...
         ' --topup=my_output --out=data_eddy_unwarped' ' --repol --estimate_move_by_susceptibility --very_verbose'];
 system(eddy)
+
+% Haaaallelujah 
+load handel
+sound(y,Fs)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% DTI analysis %%
@@ -377,6 +381,10 @@ Values = [DTI_ALPS_right; DTI_ALPS_left];
 T = table(Indices, Values);
 writetable(T, 'DTI_ALPS.csv')
 
+% Haaaallelujah 
+load handel
+sound(y,Fs)
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% NODDI Toolbox analysis %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -403,7 +411,7 @@ gunzip('NODDI_data_b0.nii.gz')
 gunzip('b0_bet_mask.nii.gz')
 gunzip('data_eddy_unwarped.nii.gz')
 
-%%
+%% if function fails delete Fittedparams.mat
 CreateROI2('data_eddy_unwarped.nii','b0_bet_mask','NODDI_roi.mat');
 
 Protocol = FSL2Protocol(bval_filename, bvec_filename);
@@ -412,6 +420,10 @@ batch_fitting('NODDI_roi.mat', Protocol, noddi, 'FittedParams.mat');
 
 SaveParamsAsNIfTI('FittedParams.mat', 'NODDI_roi.mat', 'b0_bet_mask.nii', 'Case1')
 
+% Haaaallelujah 
+load handel
+sound(y,Fs)
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Coregister to brain atlas %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -419,9 +431,10 @@ SaveParamsAsNIfTI('FittedParams.mat', 'NODDI_roi.mat', 'b0_bet_mask.nii', 'Case1
 %% Go to 3D slicer and crop out neck, save as no_neck
 
 %% Extract brain from MPRAGE anatomical sequence %%
+%% (adjust f and g, higher f (0-1) value is more stringent, higher g (-1-1) means more stringent at top, more liberal at bottom)
 anat_seq = 'no_neck';
 
-bet = ['bet ' anat_seq ' anat_seq_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -g -0.22 -v'];
+bet = ['bet ' anat_seq ' anat_seq_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -g -0.12 -v'];
 system(bet)
 brain_mask = 'anat_seq_brain_mask';
 
@@ -499,7 +512,7 @@ for n = 1:length(mask_list)
     system(fsl_maths)
 end
 
-%% Extract data from NODDI sequences fiso = FWF, ficvf = NDI
+% Extract data from NODDI sequences fiso = FWF, ficvf = NDI
 source_seq_list = {'r_MNI_Case1_ficvf','r_MNI_Case1_fiso','r_MNI_Case1_odi'};
 
 for n = 1:length(source_seq_list)
@@ -649,6 +662,11 @@ Tfwf = [key, Tfwf];
 
 Tjoin = join(Tndi, Todi);
 T_combined = join(Tjoin, Tfwf);
+
+% Haaaallelujah 
+load handel
+sound(y,Fs)
+
 %%
 writetable(T_combined, 'MNI_NODDI_indices.csv')
 %%
@@ -662,6 +680,10 @@ writetable(Trv_odi, 'MNI_ODI_raw_intensities.csv')
 source_seq = ['anat_seq_brain_mask.nii.gz'];
 fast_seg = ['fast -B -S 1 -n 3 -t 1 -v ' source_seq];
 system(fast_seg)
+
+% Haaaallelujah 
+load handel
+sound(y,Fs)
 
 %% Harvard Oxford Analysis %%
 
@@ -754,7 +776,7 @@ for n = 1:length(mask_list)
     system(fsl_maths)
 end
 
-%% Extract data from NODDI sequences 
+% Extract data from NODDI sequences 
 source_seq_list = {'r_MNI_Case1_ficvf_GM','r_MNI_Case1_fiso_GM','r_MNI_Case1_odi_GM'};
 
 for n = 1:length(source_seq_list)
@@ -1162,6 +1184,11 @@ Tfwf = [key, Tfwf];
 
 Tjoin = join(Tndi, Todi);
 T_combined = join(Tjoin, Tfwf);
+
+% Haaaallelujah 
+load handel
+sound(y,Fs)
+
 %%
 writetable(T_combined, 'HO_cort_NODDI_indices.csv')
 %%
@@ -1190,12 +1217,12 @@ flirt_coreg = ['flirt -in ' source_seq ' -ref ' ref_seq ' -out r_MNI_' source_se
 system(flirt_coreg)
 
 
-% Rebinarize mask and manually adjust threshold (higher is more stringent)
+%% Rebinarize mask and manually adjust threshold (higher is more stringent)
 WM_mask = ['r_MNI_r_noddi_anat_seq_brain_mask_pve_2_bin'];
 fsl_maths = ['fslmaths ' WM_mask ' -thr 0.55 -bin ' WM_mask '_bin.nii.gz'];
 system(fsl_maths)
 
-% Extract GM from NODDI using GM mask
+%% Extract WM from NODDI using WM mask
 WM_mask = ['r_MNI_r_noddi_anat_seq_brain_mask_pve_2_bin_bin'];
 ref_seq = ['r_MNI_Case1_ficvf'];
 fslmaths = ['fslmaths ' ref_seq ' -mul ' WM_mask ' ' ref_seq '_WM'];
@@ -1211,8 +1238,6 @@ system(fslmaths)
 %%
 
 %% Create atlas masks on FSL %%
-
-%% Binarize masks
 
 %% WILL BREAK CODE -> Manually edit Heschel's gyrus and remove apostrophe %%
 
@@ -1251,7 +1276,7 @@ for n = 1:length(mask_list)
     system(fsl_maths)
 end
 
-%% Extract data from NODDI sequences 
+% Extract data from NODDI sequences 
 source_seq_list = {'r_MNI_Case1_ficvf_WM','r_MNI_Case1_fiso_WM','r_MNI_Case1_odi_WM'};
 
 for n = 1:length(source_seq_list)
@@ -1488,6 +1513,11 @@ Tfwf = [key, Tfwf];
 
 Tjoin = join(Tndi, Todi);
 T_combined = join(Tjoin, Tfwf);
+
+% Haaaallelujah 
+load handel
+sound(y,Fs)
+
 %%
 writetable(T_combined, 'HO_subcort_NODDI_indices.csv')
 %%
@@ -1559,8 +1589,6 @@ system(fslmaths)
 
 %% Create atlas masks on FSL %%
 
-%% Binarize masks
-
 %% WILL BREAK CODE -> Manually cut short file name for fornix cres, superior frontal occipital fasciculus, sagittal stratum  %%
 
 % Remove symbols so code won't break
@@ -1589,8 +1617,6 @@ for n = 1:length(mask_list)
     outstring = regexprep(outstring, ',','');
     if isfile(instring) == 0
         continue
-    elseif instring == outstring
-        continue
     else
         movefile(instring, outstring)
     end
@@ -1609,7 +1635,7 @@ for n = 1:length(mask_list)
     system(fsl_maths)
 end
 
-%% Extract data from NODDI sequences 
+% Extract data from NODDI sequences 
 source_seq_list = {'r_JHU_Case1_ficvf_WM','r_JHU_Case1_fiso_WM','r_JHU_Case1_odi_WM'};
 
 for n = 1:length(source_seq_list)
@@ -2033,6 +2059,11 @@ Tfwf = [key, Tfwf];
 
 Tjoin = join(Tndi, Todi);
 T_combined = join(Tjoin, Tfwf);
+
+% Haaaallelujah 
+load handel
+sound(y,Fs)
+
 %%
 writetable(T_combined, 'JHU_label_NODDI_indices.csv')
 %%
@@ -2046,8 +2077,6 @@ writetable(Trv_odi, 'JHU_label_ODI_raw_intensities.csv')
 %% Use coregistered NODDI files from previous step
 
 %% Create atlas masks on FSL %%
-
-%% Binarize masks
 
 %% WILL BREAK CODE -> Manually cut short file name for fornix cres, superior frontal occipital fasciculus, sagittal stratum  %%
 
@@ -2085,7 +2114,7 @@ for n = 1:length(mask_list)
     system(fsl_maths)
 end
 
-%% Extract data from NODDI sequences 
+% Extract data from NODDI sequences 
 source_seq_list = {'r_JHU_Case1_ficvf_WM','r_JHU_Case1_fiso_WM','r_JHU_Case1_odi_WM'};
 
 for n = 1:length(source_seq_list)
@@ -2316,6 +2345,11 @@ Tfwf = [key, Tfwf];
 
 Tjoin = join(Tndi, Todi);
 T_combined = join(Tjoin, Tfwf);
+
+% Haaaallelujah 
+load handel
+sound(y,Fs)
+
 %%
 writetable(T_combined, 'JHU_tract_NODDI_indices.csv')
 %%
@@ -2332,24 +2366,26 @@ writetable(Trv_odi, 'JHU_tract_ODI_raw_intensities.csv')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Go to dataset directory %%
+DCE_dir = '/mnt/c/WSL2_dir/NODDISAH_01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing'; 
+cd(DCE_dir)
 
-cd('/mnt/c/WSL2_dir/NODDISAH_12/DCE_processing')
+% refrence sequence (T1 10 deg) %%
+ref_seq = cellstr('DICOM_T1map_10_deg_20230518105839_1601.nii');
 
-%% refrence sequence (T1 10 deg) %%
-ref_seq = cellstr('DICOM_T1map_10_deg_20240119125543_2001.nii');
+% source sequences %%
+t1_5_deg = cellstr('DICOM_T1map_5_deg_20230518105839_1501.nii');
+t1_2_deg = cellstr('DICOM_T1map_2_deg_20230518105839_1401.nii');
+dce_seq = cellstr('DICOM_DCE_5sec_50phases_20230518105839_1701.nii');
 
-%% source sequences %%
-t1_5_deg = cellstr('DICOM_T1map_5_deg_20240119125543_1901.nii');
-t1_2_deg = cellstr('DICOM_T1map_2_deg_20240119125543_1801.nii');
-dce_seq = cellstr('DICOM_DCE_5sec_50phases_20240119125543_2201.nii');
+%%
 
-%% Extract nii.gz files %%
+% Extract nii.gz files %%
 gunzip(strcat(ref_seq, '.gz'))
 gunzip(strcat(t1_5_deg, '.gz'))
 gunzip(strcat(t1_2_deg, '.gz'))
 gunzip(strcat(dce_seq, '.gz'))
 
-%% coregister T1 5 deg sequence %%
+% coregister T1 5 deg sequence %%
 nrun = 1; % enter the number of runs here
 jobfile = {'/mnt/c/Github/NODDI/batch_coreg_estimate_reslice_job.m'};
 jobs = repmat(jobfile, 1, nrun);
@@ -2392,6 +2428,10 @@ for i = 1:n
     spm_jobman('run', jobs, inputs{:});
 end
 
+% Haaaallelujah 
+load handel
+sound(y,Fs)
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% ROCKETSHIP DCE analysis %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2405,8 +2445,6 @@ gunzip(strcat('r', erase(dce_seq, '.nii'), '_AIF.nii.gz'));
 %%
 
 dce
-
-
 
 %%
 
