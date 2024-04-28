@@ -15,14 +15,14 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/AVM cases/ES/ES/DICOM';
+dataset_directory = '/mnt/c/WSL2_dir/AVM cases/7-SFSE_HR_DTI_only/DICOM';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'data2'};
+NODDI_nii_list = {'DICOM_HR_DTI_20230227120802_801'};
 
-calibration = 'Cal2';
-t2 = 'AX_T2W_CSENSE_601';
+calibration = 'DICOM_HR_DTI_CALIBRATION_20230227120802_701';
+t2 = 'DICOM_AX_T2W_CSENSE_20230227120802_601';
 
 %% rename bvec and bval files
 
@@ -116,7 +116,7 @@ tool = imtool3D(V);
 tool.setMask(mask); 
 
 %% merge all 4 NODDI sequences
-fslmerge = ['fslmerge -t data ' NODDI_nii_list{1} ' ' NODDI_nii_list{2} ' ' NODDI_nii_list{3} ' ' NODDI_nii_list{4}];
+fslmerge = ['fslmerge -t data ' NODDI_nii_list{1}];
 system(fslmerge)
 
 %% merge bvec and bval files
@@ -163,10 +163,10 @@ fprintf(index, indx);
 fclose(index);
 
 %% run eddy
-eddy = ['eddy_cuda10.2 ' '--imain=data2' ' --mask=' brain_mask ' --index=index.txt' ...
+eddy = ['eddy_cuda10.2 ' '--imain=data' ' --mask=' brain_mask ' --index=index.txt' ...
         ' --acqp=acqparams.txt' ...
-        ' --bvecs=data2_bvec.txt' ...
-        ' --bvals=data2_bval.txt' ...
+        ' --bvecs=data_bvec.txt' ...
+        ' --bvals=data_bval.txt' ...
         ' --topup=my_output --out=data_eddy_unwarped' ' --repol --estimate_move_by_susceptibility --very_verbose'];
 system(eddy)
 

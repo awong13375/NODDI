@@ -15,18 +15,18 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_02/DICOM/NODDI_processing';
+dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_20/MRI/DICOM/NODDI_processing';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20230801120712_901',...
-    'DICOM_AX_DTI_NODDI_2_20230801120712_1001',...
-    'DICOM_AX_DTI_NODDI_3_20230801120712_1101',...
-    'DICOM_AX_DTI_NODDI_4_20230801120712_1201'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240410100815_501',...
+    'DICOM_AX_DTI_NODDI_2_20240410100815_601',...
+    'DICOM_AX_DTI_NODDI_3_20240410100815_701',...
+    'DICOM_AX_DTI_NODDI_4_20240410100815_801'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20230801120712_801';
-t2 = 'DICOM_AX_T2W_CSENSE_20230801120712_601';
-anat_seq = 'DICOM_Sag_MP-Rage_20230801120712_1301';
+calibration = 'DICOM_AX_DTI_Calibration_20240410100815_301';
+t2 = 'b0';
+anat_seq = 'DICOM_Sag_MP-Rage_20240410100815_201';
 
 %% rename bvec and bval files
 
@@ -118,10 +118,10 @@ total_readout_time_cal = (1/(bandwidth*MatrixSizePhase))*(num_echo-1);
 topup = ['topup ' '--imain=b0.nii --datain=acqparams.txt --out=my_output --fout=my_field --iout=my_unwarped_images --verbose --nthr=4'];
 system(topup)
 
-% bet 
+%% bet 
 % (adjust f and g, higher f (0-1) value is more stringent, higher g (-1-1) means more stringent at top, more liberal at bottom)
 
-bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-A2 ' t2 ' -R -f 0.5 -v'];
+bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask -A2 ' t2 ' -R -f 0.5 -v'];
 %bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-f 0.7'];
 system(bet)
 brain_mask = 'nodif_brain_mask';
@@ -212,7 +212,7 @@ shortened_base_file_name = erase('data_eddy_unwarped','_eddy_unwarped');
 bval_filename = strcat(shortened_base_file_name,'_bval.txt');
 bvec_filename = strcat(shortened_base_file_name,'_eddy_unwarped_eddy_rotated_bvecs.txt');
 
-% DTI Fit
+%% DTI Fit
 dtifit = ['dtifit --data=data_eddy_unwarped.nii' ' --mask=' brain_mask ' --out=dti'...
     ' --bvecs=' bvec_filename ...
     ' --bvals=' bval_filename ' --save_tensor --sse --verbose'];
@@ -397,7 +397,7 @@ b0_roi = ['fslroi ' 'data_eddy_unwarped ' 'NODDI_data_b0 ' '0 1'];
 system(b0_roi)
 
 %% (adjust f and g, higher f (0-1) value is more stringent, higher g (-1-1) means more stringent at top, more liberal at bottom)
-NODDI_bet = ['bet ' 'NODDI_data_b0 ' 'b0_bet_mask' ' -A2 ' t2 ' -R -f 0.5 -v'];
+NODDI_bet = ['bet ' 'NODDI_data_b0 ' 'b0_bet_mask' ' -A2 ' t2 ' -R -f 0.17 -v'];
 system(NODDI_bet)
 
 V = niftiread(['NODDI_data_b0.nii.gz']);
@@ -2366,16 +2366,16 @@ writetable(Trv_odi, 'JHU_tract_ODI_raw_intensities.csv')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Go to dataset directory %%
-DCE_dir = '/mnt/c/WSL2_dir/NODDISAH_01/NODDI_post_eddy_2023-07-01/SAH_NODDI/DICOM/DCE_processing'; 
+DCE_dir = '/mnt/c/WSL2_dir/NODDISAH_19/MRI/DICOM/DCE_processing'; 
 cd(DCE_dir)
 
-% refrence sequence (T1 10 deg) %%
-ref_seq = cellstr('DICOM_T1map_10_deg_20230518105839_1601.nii');
+%% refrence sequence (T1 10 deg) %%
+ref_seq = cellstr('DICOM_T1map_10_deg_20240325151555_1701.nii');
 
 % source sequences %%
-t1_5_deg = cellstr('DICOM_T1map_5_deg_20230518105839_1501.nii');
-t1_2_deg = cellstr('DICOM_T1map_2_deg_20230518105839_1401.nii');
-dce_seq = cellstr('DICOM_DCE_5sec_50phases_20230518105839_1701.nii');
+t1_5_deg = cellstr('DICOM_T1map_5_deg_20240325151555_1601.nii');
+t1_2_deg = cellstr('DICOM_T1map_2_deg_20240325151555_1501.nii');
+dce_seq = cellstr('DICOM_DCE_5sec_50phases_20240325151555_1801.nii');
 
 %%
 
