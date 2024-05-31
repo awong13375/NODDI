@@ -15,18 +15,18 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_20/MRI/DICOM/NODDI_processing';
+dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_22/DICOM';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240410100815_501',...
-    'DICOM_AX_DTI_NODDI_2_20240410100815_601',...
-    'DICOM_AX_DTI_NODDI_3_20240410100815_701',...
-    'DICOM_AX_DTI_NODDI_4_20240410100815_801'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240413110905_1101',...
+    'DICOM_AX_DTI_NODDI_2_20240413110905_1201',...
+    'DICOM_AX_DTI_NODDI_3_20240413110905_1301',...
+    'DICOM_AX_DTI_NODDI_4_20240413110905_1401'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20240410100815_301';
-t2 = 'b0';
-anat_seq = 'DICOM_Sag_MP-Rage_20240410100815_201';
+calibration = 'DICOM_AX_DTI_Calibration_20240413110905_1001';
+t2 = 'DICOM_AX_2D_T2_20240413110905_901';
+anat_seq = 'DICOM_Sag_MP-Rage_20240413110905_501';
 
 %% rename bvec and bval files
 
@@ -192,10 +192,8 @@ eddy = ['eddy_cuda10.2 ' '--imain=data' ' --mask=' brain_mask ' --index=index.tx
         ' --bvals=data_bval.txt' ...
         ' --topup=my_output --out=data_eddy_unwarped' ' --repol --estimate_move_by_susceptibility --very_verbose'];
 system(eddy)
+%%
 
-% Haaaallelujah 
-load handel
-sound(y,Fs)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% DTI analysis %%

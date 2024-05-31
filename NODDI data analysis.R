@@ -6,8 +6,22 @@ library(cowplot)
 library(dplyr)
 library(ggpubr)
 library(ggeasy)
+library(readxl)
 
-setwd("C:/WSL2_dir/NODDISAH_11/NODDI_processing")
+setwd("G:/My Drive/Desktop files/McGill DR/NODDI")
+
+#load data
+my_data_SAH = read_excel("NODDI Dataset.xlsx", sheet="SAH")
+my_data_perimes = read_excel("NODDI Dataset.xlsx", sheet="Perimes")
+
+
+
+
+
+#shapiro.test()
+
+
+
 
 #load data
 mni_NDI_data = read.csv('MNI_NDI_raw_intensities.csv')
