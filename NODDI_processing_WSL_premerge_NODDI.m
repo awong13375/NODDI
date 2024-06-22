@@ -5,6 +5,7 @@ addpath('/usr/local/spm12/')
 addpath('/usr/local/ROCKETSHIP/')
 addpath('/usr/local/NODDI_toolbox_v1.05/fitting/CreateROI2.m')
 addpath('/root/MATLAB Add-Ons/Collections/imtool3D')
+addpath('/root/mrtrix3/bin')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Pre-processing + Eddy on NODDI sequences %%
@@ -15,18 +16,18 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/NODDISAH_22/DICOM';
+dataset_directory = '/mnt/c/WSL2_dir/NODDIPM_05/DICOM';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240413110905_1101',...
-    'DICOM_AX_DTI_NODDI_2_20240413110905_1201',...
-    'DICOM_AX_DTI_NODDI_3_20240413110905_1301',...
-    'DICOM_AX_DTI_NODDI_4_20240413110905_1401'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240509121726_1001',...
+    'DICOM_AX_DTI_NODDI_2_20240509121726_1101',...
+    'DICOM_AX_DTI_NODDI_3_20240509121726_1201',...
+    'DICOM_AX_DTI_NODDI_4_20240509121726_1301'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20240413110905_1001';
-t2 = 'DICOM_AX_2D_T2_20240413110905_901';
-anat_seq = 'DICOM_Sag_MP-Rage_20240413110905_501';
+calibration = 'DICOM_AX_DTI_Calibration_20240509121726_901';
+t2 = 'DICOM_AX_2D_T2_20240509121726_601';
+anat_seq = 'DICOM_Sag_MP-Rage_20240509121726_801';
 
 %% rename bvec and bval files
 
@@ -124,8 +125,9 @@ system(topup)
 bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask -A2 ' t2 ' -R -f 0.5 -v'];
 %bet = ['bet ' 'my_unwarped_images ' 'nodif_brain_mask ' '-f 0.7'];
 system(bet)
+%
 brain_mask = 'nodif_brain_mask';
-
+%
 V = niftiread('my_unwarped_images.nii.gz');
 mask = niftiread('nodif_brain_mask.nii.gz');
 tool = imtool3D(V);
@@ -2364,16 +2366,16 @@ writetable(Trv_odi, 'JHU_tract_ODI_raw_intensities.csv')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Go to dataset directory %%
-DCE_dir = '/mnt/c/WSL2_dir/NODDISAH_19/MRI/DICOM/DCE_processing'; 
+DCE_dir = '/mnt/c/WSL2_dir/NODDIPM_05/DICOM'; 
 cd(DCE_dir)
 
 %% refrence sequence (T1 10 deg) %%
-ref_seq = cellstr('DICOM_T1map_10_deg_20240325151555_1701.nii');
+ref_seq = cellstr('DICOM_T1map_10_deg_20240509121726_1601.nii');
 
 % source sequences %%
-t1_5_deg = cellstr('DICOM_T1map_5_deg_20240325151555_1601.nii');
-t1_2_deg = cellstr('DICOM_T1map_2_deg_20240325151555_1501.nii');
-dce_seq = cellstr('DICOM_DCE_5sec_50phases_20240325151555_1801.nii');
+t1_5_deg = cellstr('DICOM_T1map_5_deg_20240509121726_1501.nii');
+t1_2_deg = cellstr('DICOM_T1map_2_deg_20240509121726_1401.nii');
+dce_seq = cellstr('DICOM_DCE_5sec_50phases_20240509121726_1701.nii');
 
 %%
 
@@ -2435,7 +2437,7 @@ sound(y,Fs)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 run_parametric
 
-%%
+%% Create ROI and AIF masks on FSL
 
 gunzip(strcat('r', erase(dce_seq, '.nii'), '_ROI.nii.gz'));
 gunzip(strcat('r', erase(dce_seq, '.nii'), '_AIF.nii.gz'));
@@ -2448,6 +2450,88 @@ dce
 
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Tractography with MRITrix3 %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+setenv('PATH', [getenv('PATH') ':/root/mrtrix3/bin']);
+addpath(genpath('/root/mrtrix3/bin'))
+
+
+%% go to dataset directory
+dataset_directory = '/mnt/c/WSL2_dir/Medical_genetics_case';
+cd(dataset_directory)
+
+bval_filename = 'bvals.bval';
+bvec_filename = 'data_eddy_unwarped_eddy_rotated_bvecs.bvec';
+%
+mrconvert = ['mrconvert data_eddy_unwarped.nii.gz preprocessed_DTI.mif -fslgrad ' bvec_filename ' ' bval_filename];
+system(mrconvert)
+%
+dwi2mask = ['dwi2mask preprocessed_DTI.mif mask_preprocessed_DTI.mif'];
+system(dwi2mask)
+%
+dwi2response = ['dwi2response tournier preprocessed_DTI.mif wm.txt -voxels voxels.mif'];
+system(dwi2response)
+%
+%mrview = ['mrview preprocessed_DTI.mif -overlay.load voxels.mif'];
+%system(mrview)
+dwi2fod = ['dwi2fod csd preprocessed_DTI.mif -mask mask_preprocessed_DTI.mif wm.txt wmfod.mif'];
+system(dwi2fod)
+%
+mtnormalise = ['mtnormalise wmfod.mif wmfod_norm.mif -mask mask_preprocessed_DTI.mif'];
+system(mtnormalise)
+
+%
+mrconvert = ['mrconvert t1_space_sag_p4_iso_20.nii T1.mif'];
+system(mrconvert)
+%
+five_ttgen = ['5ttgen fsl T1.mif 5tt_nocoreg.mif -info -nthreads 16 -force'];
+system(five_ttgen)
+%
+dwiextract = ['dwiextract preprocessed_DTI.mif preprocessed_DTI_b0.mif -bzero'];
+system(dwiextract)
+
+mrconvert = ['mrconvert preprocessed_DTI_b0.mif preprocessed_DTI_b0.nii.gz'];
+system(mrconvert)
+
+mrconvert = ['mrconvert 5tt_nocoreg.mif 5tt_nocoreg.nii.gz'];
+system(mrconvert)
+
+fslroi = ['fslroi 5tt_nocoreg.nii.gz 5tt_vol0.nii.gz 0 1'];
+system(fslroi)
+
+flirt = ['flirt -in preprocessed_DTI_b0.nii.gz -ref 5tt_vol0.nii.gz -interp nearestneighbour -dof 6 -omat diff2struct_fsl.mat'];
+system(flirt)
+
+transformconvert = ['transformconvert diff2struct_fsl.mat preprocessed_DTI_b0.nii.gz 5tt_nocoreg.nii.gz flirt_import diff2struct_mrtrix.txt'];
+system(transformconvert)
+
+mrtransform = ['mrtransform 5tt_nocoreg.mif -linear diff2struct_mrtrix.txt -inverse 5tt_coreg.mif'];
+system(mrtransform)
+
+fivett2gmwmi = ['5tt2gmwmi 5tt_coreg.mif gmwmSeed_coreg.mif'];
+system(fivett2gmwmi)
+
+tckgen = ['tckgen -act 5tt_coreg.mif -backtrack -seed_gmwmi gmwmSeed_coreg.mif -maxlength 250 -cutoff 0.06 -select 10000000 wmfod_norm.mif tracks_10M.tck'];
+system(tckgen)
+
+tcksift2 = ['tcksift2 -act 5tt_coreg.mif -out_mu sift_mu.txt -out_coeffs sift_coeffs.txt tracks_10M.tck wmfod_norm.mif sift_1Mb.txt'];
+system(tcksift2)
+%%
+tckedit = ['tckedit tracks_10M.tck -number 200k smallerTracks_200k.tck']
+system(tckedit)
+
+%% ROI filtered tractograms
+
+tckedit = ['tckedit -include R_M1_mask.mif -include R_mesen_mask.mif -include R_pmj_mask.mif -include R_hemicord_mask.mif '...
+    '-exclude midline_mask.mif -exclude peduncles_mask.mif tracks_10M.tck Ripsi.tck -force'];
+system(tckedit)
+
+tckedit = ['tckedit -include L_M1_mask.mif -include L_mesen_mask.mif -include L_pmj_mask.mif -include L_hemicord_mask.mif '...
+    '-exclude midline_mask.mif -exclude peduncles_mask.mif tracks_10M.tck Lipsi.tck -force'];
+system(tckedit)
 
 %% template codes %%
 
