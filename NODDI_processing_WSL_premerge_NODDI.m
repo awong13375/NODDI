@@ -16,16 +16,16 @@ setenv('PATH', [getenv('PATH') ':/usr/local/fsl/bin']);
 addpath(genpath('/usr/local/fsl/bin'))
 
 %% go to dataset directory
-dataset_directory = '/mnt/c/WSL2_dir/NODDIPM_05/DICOM';
+dataset_directory = '/mnt/c/WSL2_dir/Sleep_wake/Asleep';
 cd(dataset_directory)
 
 %%
-NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240509121726_1001',...
-    'DICOM_AX_DTI_NODDI_2_20240509121726_1101',...
-    'DICOM_AX_DTI_NODDI_3_20240509121726_1201',...
-    'DICOM_AX_DTI_NODDI_4_20240509121726_1301'};
+NODDI_nii_list = {'DICOM_AX_DTI_NODDI_1_20240702074749_1001',...
+    'DICOM_AX_DTI_NODDI_2_20240702074749_1101',...
+    'DICOM_AX_DTI_NODDI_3_20240702074749_1201',...
+    'DICOM_AX_DTI_NODDI_4_20240702074749_1301'};
 
-calibration = 'DICOM_AX_DTI_Calibration_20240509121726_901';
+calibration = 'DICOM_AX_DTI_Calibration_20240702074749_901';
 t2 = 'DICOM_AX_2D_T2_20240509121726_601';
 anat_seq = 'DICOM_Sag_MP-Rage_20240509121726_801';
 
@@ -231,12 +231,16 @@ end
 
 % coregister to atlas JHU FA atlas
 
-% Coreg FA map
+% Coreg FA and V1 map
 fa_map = 'dti_FA';
+v1_map = 'dti_V1';
 ref_seq = ['/mnt/c/WSL2_dir/Atlases/JHU-ICBM-FA-1mm.nii'];
 
 flirt_coreg = ['flirt -in ' fa_map ' -ref ' ref_seq ' -out r' fa_map ' -omat invol2refvol.mat -v'];
 system(flirt_coreg)
+flirt_coreg = ['flirt -in ' v1_map ' -ref ' ref_seq ' -out r' v1_map ' -omat invol2refvol.mat -v'];
+system(flirt_coreg)
+
 
 % Coreg diffusivity maps based on FA registration matrix
 for i = 1:length(tensor_dir)
@@ -265,10 +269,10 @@ system(fsl_maths)
 fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
 system(fsl_maths)
 
-fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin_1_L.nii.gz'];
 system(fsl_maths)
 
-fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin.nii.gz -o out.txt'];
+fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin_1_L.nii.gz -o out.txt'];
 system(fsl_meants)
 Dxx_assoc = importdata('out.txt');
 
@@ -279,10 +283,10 @@ system(fsl_maths)
 fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
 system(fsl_maths)
 
-fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin_2_L.nii.gz'];
 system(fsl_maths)
 
-fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin.nii.gz -o out.txt'];
+fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin_2_L.nii.gz -o out.txt'];
 system(fsl_meants)
 Dxx_proj = importdata('out.txt');
 
@@ -293,10 +297,10 @@ system(fsl_maths)
 fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
 system(fsl_maths)
 
-fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin_3_L.nii.gz'];
 system(fsl_maths)
 
-fsl_meants = ['fslmeants -i ' Dyy ' -m sphere_bin.nii.gz -o out.txt'];
+fsl_meants = ['fslmeants -i ' Dyy ' -m sphere_bin_3_L.nii.gz -o out.txt'];
 system(fsl_meants)
 Dyy_proj = importdata('out.txt');
 
@@ -307,10 +311,10 @@ system(fsl_maths)
 fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
 system(fsl_maths)
 
-fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin_4_L.nii.gz'];
 system(fsl_maths)
 
-fsl_meants = ['fslmeants -i ' Dzz ' -m sphere_bin.nii.gz -o out.txt'];
+fsl_meants = ['fslmeants -i ' Dzz ' -m sphere_bin_4_L.nii.gz -o out.txt'];
 system(fsl_meants)
 Dzz_assoc = importdata('out.txt');
 
@@ -324,10 +328,10 @@ system(fsl_maths)
 fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
 system(fsl_maths)
 
-fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin_1_R.nii.gz'];
 system(fsl_maths)
 
-fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin.nii.gz -o out.txt'];
+fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin_1_R.nii.gz -o out.txt'];
 system(fsl_meants)
 Dxx_assoc = importdata('out.txt');
 
@@ -338,10 +342,10 @@ system(fsl_maths)
 fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
 system(fsl_maths)
 
-fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin_2_R.nii.gz'];
 system(fsl_maths)
 
-fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin.nii.gz -o out.txt'];
+fsl_meants = ['fslmeants -i ' Dxx ' -m sphere_bin_2_R.nii.gz -o out.txt'];
 system(fsl_meants)
 Dxx_proj = importdata('out.txt');
 
@@ -352,10 +356,10 @@ system(fsl_maths)
 fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
 system(fsl_maths)
 
-fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin_3_R.nii.gz'];
 system(fsl_maths)
 
-fsl_meants = ['fslmeants -i ' Dyy ' -m sphere_bin.nii.gz -o out.txt'];
+fsl_meants = ['fslmeants -i ' Dyy ' -m sphere_bin_3_R.nii.gz -o out.txt'];
 system(fsl_meants)
 Dyy_proj = importdata('out.txt');
 
@@ -366,10 +370,10 @@ system(fsl_maths)
 fsl_maths = ['fslmaths ROI.nii.gz -kernel sphere 5 -fmean sphere.nii.gz -odt float'];
 system(fsl_maths)
 
-fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin.nii.gz'];
+fsl_maths = ['fslmaths sphere.nii.gz -bin sphere_bin_4_R.nii.gz'];
 system(fsl_maths)
 
-fsl_meants = ['fslmeants -i ' Dzz ' -m sphere_bin.nii.gz -o out.txt'];
+fsl_meants = ['fslmeants -i ' Dzz ' -m sphere_bin_4_R.nii.gz -o out.txt'];
 system(fsl_meants)
 Dzz_assoc = importdata('out.txt');
 
